@@ -21,48 +21,41 @@
 
 ## 🎯 Pattern Overview
 
-### Definition (定义)
+### Definition
 
 > **Strategy Pattern** defines a family of algorithms, encapsulates each one, and makes them interchangeable. Strategy lets the algorithm vary independently from clients that use it.
->
 > **策略模式**定义了一系列算法，把它们一个个封装起来，并且使它们可以互相替换。策略模式让算法可以独立于使用它的客户端而变化。
 
 ### Visual Metaphor (形象比喻)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         THE NAVIGATION APP ANALOGY                           │
-│                         导航APP的比喻                                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Think of your favorite navigation app (高德/百度地图):                       │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────┐      │
-│  │                         DESTINATION                               │      │
-│  │                    同一个目的地：国贸CBD                            │      │
-│  └──────────────────────────────────────────────────────────────────┘      │
-│                                    │                                         │
-│                                    │                                         │
-│         ┌──────────────────────────┼──────────────────────────┐             │
-│         │                          │                          │             │
-│         ▼                          ▼                          ▼             │
-│  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐       │
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         THE NAVIGATION APP ANALOGY                        │
+│                         导航APP的比喻                                      │
+├───────────────────────────────────────────────────────────────────────────┤
+│  Think of your favorite navigation app (高德/百度地图):                    │
+│  ┌──────────────────────────────────────────────────────────────────┐     │
+│  │                         DESTINATION                              │     │
+│  │                    同一个目的地：国贸CBD                           │     │
+│  └──────────────────────────────────────────────────────────────────┘     │
+│                                    │                                      │
+│                                    │                                      │
+│         ┌──────────────────────────┼──────────────────────────┐           │
+│         │                          │                          │           │
+│         ▼                          ▼                          ▼           │
+│  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐      │
 │  │   🚗 驾车   │           │   🚌 公交   │           │   🚶 步行   │       │
-│  │             │           │             │           │             │       │
-│  │ Strategy A  │           │ Strategy B  │           │ Strategy C  │       │
-│  │ 25分钟      │           │ 45分钟      │           │ 90分钟      │       │
-│  │ ¥15 油费   │           │ ¥2 票价     │           │ ¥0          │       │
-│  └─────────────┘           └─────────────┘           └─────────────┘       │
-│                                                                              │
-│  SAME DESTINATION, DIFFERENT STRATEGIES                                     │
-│  User chooses based on context (time, budget, preference)                  │
-│                                                                              │
-│  In code:                                                                    │
-│  - INavigationStrategy interface (共同接口)                                 │
+│  │ Strategy A  │           │ Strategy B  │           │ Strategy C  │      │
+│  │ 25分钟      │           │ 45分钟      │            │ 90分钟      │      │
+│  │ ¥15 油费    │           │ ¥2 票价     │            │ ¥0          │      │
+│  └─────────────┘           └─────────────┘           └─────────────┘      │
+│  SAME DESTINATION, DIFFERENT STRATEGIES                                   │
+│  User chooses based on context (time, budget, preference)                 │
+│  In code:                                                                 │
+│  - INavigationStrategy interface (共同接口)                                │
 │  - DrivingStrategy, TransitStrategy, WalkingStrategy (具体实现)            │
 │  - NavigationService selects strategy based on user preference (选择器)    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 | Component | Role | Logistics Example |
@@ -111,7 +104,6 @@ public class RoutingService
             // ...
         }
         // Adding a new algorithm? Add another else-if here!
-        // 新增算法？在这里再加一个 else-if！
         // File grows to 1000+ lines...
     }
 }
@@ -135,9 +127,8 @@ public class RoutingService
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         STRATEGY PATTERN UML                                 │
+│                         STRATEGY PATTERN UML                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
 │                        ┌───────────────────────┐                            │
 │                        │       Context         │                            │
 │                        │   (RoutingService)    │                            │
@@ -158,18 +149,17 @@ public class RoutingService
 │                        │ + Execute()           │                            │
 │                        │   (CalculateRoute)    │                            │
 │                        └───────────────────────┘                            │
-│                                    △                                        │
+│                                    ^                                        │
 │                                    │ implements                             │
-│               ┌────────────────────┼────────────────────┐                  │
-│               │                    │                    │                  │
-│    ┌──────────┴──────────┐ ┌──────┴──────────┐ ┌───────┴─────────┐        │
+│               ┌────────────────────┼────────────────────┐                   │
+│               │                    │                    │                   │
+│    ┌──────────┴──────────┐ ┌───────┴──────────┐ ┌───────┴──────────┐        │
 │    │  ConcreteStrategyA  │ │ ConcreteStrategyB│ │ ConcreteStrategyC│        │
 │    │  (ExpressStrategy)  │ │ (EconomyStrategy)│ │(BalancedStrategy)│        │
-│    ├─────────────────────┤ ├─────────────────┤ ├─────────────────┤        │
+│    ├─────────────────────┤ ├──────────────────┤ ├──────────────────┤        │
 │    │ + Execute()         │ │ + Execute()      │ │ + Execute()      │        │
 │    │   (A* Algorithm)    │ │ (Dijkstra)       │ │ (Weighted)       │        │
-│    └─────────────────────┘ └─────────────────┘ └─────────────────┘        │
-│                                                                              │
+│    └─────────────────────┘ └──────────────────┘ └──────────────────┘        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -190,57 +180,57 @@ public class RoutingService
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    LOGISTICS ROUTING STRATEGY PATTERN                        │
+│                    LOGISTICS ROUTING STRATEGY PATTERN                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  INTERFACE CONTRACT:                                                         │
+│  INTERFACE CONTRACT:                                                        │
 │  ────────────────────                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  public interface IRouteStrategy                                     │   │
-│  │  {                                                                   │   │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  public interface IRouteStrategy                                    │    │
+│  │  {                                                                  │    │
 │  │      string Name { get; }          // 策略标识                       │   │
-│  │      int Priority { get; }         // 优先级排序                      │   │
+│  │      int Priority { get; }         // 优先级排序                     │   │
 │  │      bool CanHandle(RouteRequest request);   // 适用性判断           │   │
 │  │      Route CalculateRoute(RouteRequest request);   // 核心算法       │   │
 │  │      RouteMetrics GetMetrics();    // 性能指标                       │   │
-│  │  }                                                                   │   │
+│  │  }                                                                  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                              │
-│  CONCRETE STRATEGIES:                                                        │
-│  ────────────────────                                                       │
-│                                                                              │
+│                                                                            │
+│  CONCRETE STRATEGIES:                                                      │
+│  ────────────────────                                                      │
+│                                                                             
 ┌─────────────────────────────────────────────────────────────────────┐
 │  ExpressRouteStrategy (顺丰速运标准实现)                             │
 │  ────────────────────────────────────────────────────────────────── │
 │  Name: "express"                                                    │
 │  Algorithm: A* + TDSP (Time-Dependent Shortest Path)                │
-│  Optimizes: TIME (24小时达服务)                                     │
-│  Use when: 顺丰"次日达"服务 (SLA 99.5%准时率)                       │
-│  Cost factor: 1.5x base rate (2023财报数据)                         │
-│  Carbon factor: 0.500 kg CO2/ton-km (民航局标准)                    │
+│  Optimizes: TIME (24小时达服务)                                      │
+│  Use when: 顺丰"次日达"服务 (SLA 99.5%准时率)                         │
+│  Cost factor: 1.5x base rate (2023财报数据)                          │
+│  Carbon factor: 0.500 kg CO2/ton-km (民航局标准)                     │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│  EconomyRouteStrategy (京东物流标准实现)                             │
+│  EconomyRouteStrategy (京东物流标准实现)                              │
 │  ────────────────────────────────────────────────────────────────── │
 │  Name: "economy"                                                    │
-│  Algorithm: Dijkstra + 路径优化 (Dijkstra with Chinese road rules)  │
-│  Optimizes: COST (成本最低)                                         │
-│  Use when: 京东"经济型"服务 (标准配送)                              │
+│  Algorithm: Dijkstra +Route Optimization路径优化(Chinese road rules) │
+│  Optimizes: COST (成本最低)                                          │
+│  Use when: JD京东"经济型"服务 (Standard Delivery)                    │
 │  Carbon factor: 0.102 kg CO2/ton-km (GB/T 32150-2015标准)           │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│  CarbonOptimalStrategy (中通快递标准实现)                            │
+│  CarbonOptimalStrategy (ZTO Express Standard Implementation)        │
 │  ────────────────────────────────────────────────────────────────── │
 │  Name: "carbon"                                                     │
-│  Algorithm: 多式联运碳排放优化 (Multi-modal with Chinese emission factors) │
-│  Optimizes: CO2 EMISSIONS (碳排放最低)                              │
-│  Use when: 中通ESG合规要求 (2023年报数据)                           │
+│  Algorithm: Multimodal Carbon Emission Optimization (ChineseFactors)│
+│  Optimizes: CO2 EMISSIONS (Lowest Carbon Emissions)                 │
+│  Use when: ZTO ESG Compliance Requirements (2023 Annual Report)     │
 │  Emission factors:                                                  │
 │    - Road: 0.102 kg/ton-km (GB/T 32150-2015)                        │
-│    - Rail: 0.030 kg/ton-km (中国铁路总公司)                         │
-│    - Air: 0.500 kg/ton-km (民航局)                                  │
+│    - Rail: 0.030 kg/ton-km (China Railway Corporation)              │
+│    - Air: 0.500 kg/ton-km (CAAC)                                    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Strategy Selection Flow
@@ -249,7 +239,6 @@ public class RoutingService
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    STRATEGY SELECTION DECISION FLOW                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
 │  RouteRequest arrives                                                       │
 │        │                                                                    │
 │        ▼                                                                    │
@@ -285,7 +274,6 @@ public class RoutingService
 │  ┌─────────────────────────────────────────────────────────────┐           │
 │  │  Default: Use BalancedStrategy                               │           │
 │  └─────────────────────────────────────────────────────────────┘           │
-│                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -306,42 +294,39 @@ public class RoutingService
 ### Open/Closed Principle Deep Dive
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    OPEN/CLOSED PRINCIPLE IN ACTION                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  SCENARIO: Adding Drone Delivery Strategy (新增无人机配送策略)                │
-│                                                                              │
-│  WITHOUT STRATEGY PATTERN:                                                   │
-│  ─────────────────────────                                                  │
-│  Files to modify:                                                            │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    OPEN/CLOSED PRINCIPLE IN ACTION                         │
+├────────────────────────────────────────────────────────────────────────────┤
+│  SCENARIO: Adding Drone Delivery Strategy (新增无人机配送策略)               │
+│                                                                            │
+│  WITHOUT STRATEGY PATTERN:                                                 │
+│  ─────────────────────────                                                 │
+│  Files to modify:                                                          │
 │  ✗ RoutingService.cs     → Add else-if branch                              │
 │  ✗ RoutingController.cs  → Maybe add endpoint                              │
 │  ✗ RoutingServiceTests.cs → Modify all tests                               │
-│                                                                              │
-│  Risk: Breaking existing functionality                                       │
-│  中文: 新增功能可能破坏现有功能                                               │
-│                                                                              │
+│                                                                             │
+│  Risk: Breaking existing functionality                                      │
+│  中文: 新增功能可能破坏现有功能                                                │
+│                                                                             │
 │  ─────────────────────────────────────────────────────────────────────────  │
-│                                                                              │
-│  WITH STRATEGY PATTERN:                                                      │
+│  WITH STRATEGY PATTERN:                                                     │
 │  ──────────────────────                                                     │
-│  Files to CREATE (new):                                                      │
+│  Files to CREATE (new):                                                     │
 │  ✓ DroneDeliveryStrategy.cs → New strategy implementation                   │
 │  ✓ DroneDeliveryStrategyTests.cs → New isolated tests                       │
-│                                                                              │
-│  Files to MODIFY:                                                            │
-│  ○ DependencyInjection.cs → One line to register (config only)             │
-│                                                                              │
-│  Files UNTOUCHED:                                                            │
+│                                                                             │
+│  Files to MODIFY:                                                           │
+│  ○ DependencyInjection.cs → One line to register (config only)              │
+│                                                                             │
+│  Files UNTOUCHED:                                                           │
 │  ✓ RoutingService.cs      → No changes                                      │
 │  ✓ ExpressStrategy.cs     → No changes                                      │
 │  ✓ EconomyStrategy.cs     → No changes                                      │
 │  ✓ All existing tests     → No changes                                      │
-│                                                                              │
+│                                                                             │
 │  Risk: ZERO impact on existing functionality                                │
 │  中文: 对现有功能零影响                                                       │
-│                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
