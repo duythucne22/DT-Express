@@ -1,1621 +1,372 @@
-# 🔍 05-AUDIT-TRACKING - Design Specification
+# 🔍 05-AUDIT-TRACKING — Multi-Pattern Design Spec
 
-> **Domain**: Cross-Cutting Concern (All Domains)  
-> **Primary Pattern**: Interceptor Pattern (拦截器模式) + Event Sourcing  
-> **Pattern Study Guides**: [INTERCEPTOR-PATTERN.md](../design-patterns/INTERCEPTOR-PATTERN.md) | [DECORATOR-PATTERN.md](../design-patterns/DECORATOR-PATTERN.md)  
-> **Status**: ⬜ Not Started  
-> **Dependencies**: All other domains (01, 02, 03, 04)
+> **Domain**: Audit Tracking — cross-cutting logging + traceability across all domains  
+> **Patterns**: Interceptor · Dependency Inversion · (Optional) Decorator (PII masking) · (Optional) Event Stream (audit/event-store mindset)  
+> **Goal**: Learning-sized, interview-ready design that still reflects real work experience (compliance/forensics), not production-ready ops engineering  
+> **Dependencies**: [01-DYNAMIC-ROUTING.md](01-DYNAMIC-ROUTING.md) · [02-MULTI-CARRIER.md](02-MULTI-CARRIER.md) · [03-REALTIME-TRACKING.md](03-REALTIME-TRACKING.md) · [04-ORDER-PROCESSING.md](04-ORDER-PROCESSING.md)
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Domain Overview](#domain-overview)
-2. [Business Context](#business-context)
-3. [Feature Specification](#feature-specification)
-4. [Design Pattern Application](#design-pattern-application)
-5. [Enhanced Pattern Integration](#enhanced-pattern-integration)
-6. [Observability & Self-Monitoring](#observability--self-monitoring)
-7. [Interface Contracts](#interface-contracts)
-8. [Audit Event Specifications](#audit-event-specifications)
-9. [Data Models](#data-models)
-10. [Audit Data Lifecycle Management](#audit-data-lifecycle-management)
-11. [Real-Time Data Pipeline](#real-time-data-pipeline)
-12. [System Resilience & Deployment](#system-resilience--deployment)
-13. [Compliance Requirements](#compliance-requirements)
-14. [Integration Points](#integration-points)
-15. [Design Pattern Ledger](#design-pattern-ledger)
-16. [Implementation Roadmap](#implementation-roadmap)
-17. [Study Resources](#study-resources)
-18. [Acceptance Criteria](#acceptance-criteria)
+1. [Domain Overview](#-domain-overview)
+2. [Business Context](#-business-context)
+3. [Architecture Layers](#-architecture-layers)
+4. [Feature Specification](#-feature-specification)
+5. [Design Pattern Application](#-design-pattern-application)
+6. [Interface Contracts](#-interface-contracts)
+7. [Audit Events (Minimal Catalog)](#-audit-events-minimal-catalog)
+8. [Data Models](#-data-models)
+9. [Integration Points](#-integration-points)
+10. [Acceptance Criteria](#-acceptance-criteria)
+11. [Project Structure](#-project-structure)
+12. [Interview Guide](#-interview-guide)
+13. [Study Resources](#-study-resources)
+14. [Related Documents](#-related-documents)
 
 ---
 
 ## 🎯 Domain Overview
 
+### Elevator Pitch
+
+> “Audit Tracking is a **cross-cutting module** that records *who did what, when, and why* across the TMS. It uses the **Interceptor Pattern** to capture changes without polluting business code, applies **DIP** so storage is replaceable, and optionally uses a **Decorator** to enforce PII masking consistently. The output is an append-only audit stream that can power a timeline view, investigations, and compliance evidence.”
+
 ### Purpose
-The Audit Tracking domain provides **comprehensive change tracking and compliance logging** across all system operations, ensuring every data modification, access, and decision is recorded for regulatory compliance, troubleshooting, and analytics.
+
+- Capture **entity changes** (create/update/delete) across domains
+- Capture **business actions** (dispatch decision, carrier booking, refunds, cancellations)
+- Provide **timeline** queries for customer support and incident investigation
+- Enforce **immutability** (append-only) + basic retention policies (conceptual)
 
 ### Scope
-| In Scope | Out of Scope |
-|----------|--------------|
-| Entity change tracking | Business logic implementation |
-| User action logging | Authentication (handled by Identity) |
-| API request/response logging | Real-time alerting (separate service) |
-| Decision audit trail | Log aggregation (ELK/Splunk) |
-| Compliance reporting | Performance monitoring (APM) |
-| Data retention policies | Backup management |
 
-### Business Value
-- **Compliance**: Meet ISO 27001, GDPR, SOX requirements
-- **Troubleshooting**: Complete trail for issue investigation
-- **Security**: Detect unauthorized access or changes
-- **Analytics**: Historical data for business insights
-- **Accountability**: Clear ownership of every change
+| In Scope | Out of Scope (explicitly) |
+|----------|----------------------------|
+| Interceptors for DB save + request pipeline | Full SIEM / log aggregation platform design |
+| Minimal audit stream + query service | Production deployment, HA, DR, multi-region |
+| PII masking concept (decorator) | ML-based PII discovery, advanced cryptography |
+| Correlation IDs + basic traceability | Full compliance program coverage and legal docs |
+
+### Key Insight
+
+> Audit is not “a table”.
+>
+> Audit is a **system capability**:
+> intercept → enrich context → mask → append → query by correlation.
 
 ---
 
 ## 💼 Business Context
 
-### Audit Requirements by Regulation
+### Why teams actually build this
 
-| Regulation | Requirement | Implementation |
-|------------|-------------|----------------|
-| **ISO 27001** | Access logging, change tracking | All entity modifications logged |
-| **GDPR** | Data access logging, right to be forgotten | PII access tracked, deletion audit |
-| **SOX** | Financial data integrity | Order amounts, settlements logged |
-| **Customs** | Import/export documentation | International shipment audit trail |
-| **Industry** | Carrier interactions | All carrier API calls logged |
+- **Support**: “Why was this order cancelled?”
+- **Operations**: “Which carrier booking failed and who retried it?”
+- **Security**: “Who accessed/changed PII?”
+- **Compliance**: “Prove a set of actions happened, immutably.”
 
-### Audit Event Categories
+### Typical questions the audit system must answer
 
-| Category | Examples | Retention | Access Level |
-|----------|----------|-----------|--------------|
-| **Security** | Login, logout, permission change | 2 years | Admin only |
-| **Data Change** | Create, update, delete entities | 1 year | Admin, Auditor |
-| **Business Action** | Order dispatch, carrier selection | 3 years | All users |
-| **System Event** | Service start/stop, errors | 90 days | Admin, DevOps |
-| **API Call** | External service interactions | 180 days | Admin, DevOps |
+- Show the order’s lifecycle timeline (create → dispatch → delivered → return/refund)
+- Show what changed (before/after fields) and who made the change
+- Show all actions under one correlation ID for an API request
 
-### Business Rules
+### Business Rules (minimal)
 
-| Rule ID | Rule Description | Implementation |
-|---------|------------------|----------------|
-| BR-AU-001 | All entity changes must be logged | EF Core interceptor |
-| BR-AU-002 | Audit logs are immutable | Append-only storage |
-| BR-AU-003 | PII access must be logged | Attribute-based tracking |
-| BR-AU-004 | Failed operations must be logged | Exception interceptor |
-| BR-AU-005 | Logs must include user context | ClaimsPrincipal capture |
-| BR-AU-006 | Batch operations itemized | Individual change records |
-| BR-AU-007 | Retention policies enforced | Scheduled cleanup jobs |
+| Rule ID | Rule | Why |
+|---------|------|-----|
+| BR-AU-001 | All changes are captured via interceptors, not scattered logging | consistency + SRP |
+| BR-AU-002 | Audit records are append-only | trustworthiness |
+| BR-AU-003 | Every record contains user + timestamp + correlation ID | forensic usefulness |
+| BR-AU-004 | PII is masked in stored audit payloads (policy-based) | reduce data risk |
+| BR-AU-005 | Audit queries are read-only and never mutate domain state | separation |
 
-### Use Cases
+---
 
-#### UC-AU-001: Track Entity Change
+## 🏗 Architecture Layers
+
+### Separation Principle
+
 ```
-Actor: System (automatic)
-Precondition: Entity being saved to database
-Flow:
-  1. EF Core interceptor detects SaveChanges
-  2. Interceptor captures changed entities
-  3. For each changed entity:
-     a. Record entity type, ID, operation
-     b. Capture before/after values
-     c. Record user, timestamp, correlation ID
-  4. Audit records saved (same transaction or separate)
-Postcondition: Change audit trail created
-```
-
-#### UC-AU-002: Query Audit History
-```
-Actor: Auditor or Admin
-Precondition: User has audit access permission
-Flow:
-  1. User specifies search criteria (entity, date range, user)
-  2. System queries audit store
-  3. System returns paginated results
-  4. User can drill into specific change details
-Postcondition: Audit history displayed
+┌──────────────────────────────────────────────────────────────┐
+│                       CAPTURE LAYER                           │
+│  Interceptors + hooks:                                        │
+│  • DB Save interceptor (entity changes)                       │
+│  • Request interceptor (API calls)                            │
+│  • Domain-event hook (business actions)                        │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ produces audit records
+┌──────────────────────────────▼───────────────────────────────┐
+│                      CORE AUDIT LAYER                          │
+│  • Models: AuditRecord, AuditContext                           │
+│  • Policies: masking rules, category, retention class          │
+│  • Interfaces: IAuditSink, IAuditClock, ICorrelationIdProvider │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ depends on abstractions
+┌──────────────────────────────▼───────────────────────────────┐
+│                    INFRASTRUCTURE LAYER                        │
+│  • Storage adapter (SQL / file / in-memory)                    │
+│  • Optional decorator: PII masking on write                     │
+│  • Simple query adapter (by entityId/correlation/time)         │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+┌──────────────────────────────▼───────────────────────────────┐
+│                         DEMO LAYER                             │
+│  • sample flows: dispatch order, carrier booking, refund       │
+│  • print timeline by correlationId                             │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-#### UC-AU-003: Generate Compliance Report
-```
-Actor: Compliance Officer
-Precondition: Audit data exists for period
-Flow:
-  1. User selects report type (e.g., data access report)
-  2. User specifies date range
-  3. System aggregates audit data
-  4. System generates formatted report (PDF/Excel)
-Postcondition: Compliance report generated
-```
+### Why this layering matters
 
-#### UC-AU-004: Investigate Incident
-```
-Actor: Admin or Support
-Precondition: Incident reported (e.g., wrong delivery)
-Flow:
-  1. User enters order ID or tracking number
-  2. System retrieves complete audit trail:
-     - Order creation details
-     - All status changes
-     - Carrier interactions
-     - Address modifications
-  3. Timeline view shows all events
-Postcondition: Complete history available for investigation
-```
+- “Capture” stays close to frameworks (EF Core / web pipeline) and is replaceable.
+- “Core audit” stays framework-free and testable.
 
 ---
 
 ## 📝 Feature Specification
 
-### Feature Matrix
-
-| Feature ID | Feature Name | Description | Pattern | Priority |
-|------------|--------------|-------------|---------|----------|
-| AU-F001 | Entity Change Tracking | Auto-track all entity changes | Interceptor | 🔴 High |
-| AU-F002 | User Context Capture | Record who made changes | Context | 🔴 High |
-| AU-F003 | Before/After Values | Store old and new values | Snapshot | 🔴 High |
-| AU-F004 | Correlation Tracking | Link related changes | Correlation ID | 🔴 High |
-| AU-F005 | API Call Logging | Log external API interactions | Middleware | 🟡 Medium |
-| AU-F006 | Decision Logging | Record algorithm decisions | Event | 🟡 Medium |
-| AU-F007 | Audit Query API | Search and filter audit logs | Query | 🔴 High |
-| AU-F008 | Timeline View | Chronological event view | Projection | 🟡 Medium |
-| AU-F009 | Compliance Reports | Pre-built compliance reports | Report | 🟡 Medium |
-| AU-F010 | Retention Management | Auto-cleanup old logs | Scheduler | 🟢 Low |
-| AU-F011 | PII Masking | Mask sensitive data in logs | Filter | 🔴 High |
-| AU-F012 | Export Capability | Export logs for external analysis | Export | 🟢 Low |
-
-### AU-F001: Entity Change Tracking
-
-**Description**: Automatically capture all changes to domain entities.
-
-**Tracked Operations**:
-| Operation | Captured Data | Storage |
-|-----------|---------------|---------|
-| INSERT | All field values | New values only |
-| UPDATE | Changed fields only | Before + After |
-| DELETE | All field values | Before values only |
-| SOFT DELETE | Status change | Before + After |
-
-**Excluded from Tracking**:
-- Computed properties
-- Navigation properties (tracked separately)
-- Explicitly marked [NotAudited] properties
-- Temporary/cache entities
-
-### AU-F003: Before/After Values
-
-**Description**: Store the complete state change for each modification.
-
-**Value Capture Strategy**:
-```
-For UPDATE operations:
-┌────────────────────────────────────────────────────────────┐
-│  Entity: Order                                             │
-│  Property: Status                                          │
-│  OldValue: "CREATED" (serialized)                          │
-│  NewValue: "CONFIRMED" (serialized)                        │
-│                                                            │
-│  Entity: Order                                             │
-│  Property: TotalAmount                                     │
-│  OldValue: { "Amount": 100, "Currency": "CNY" }            │
-│  NewValue: { "Amount": 120, "Currency": "CNY" }            │
-└────────────────────────────────────────────────────────────┘
-```
-
-### AU-F011: PII Masking
-
-**Description**: Automatically mask sensitive data in audit logs.
-
-**Masking Rules**:
-| Data Type | Example | Masked Value |
-|-----------|---------|--------------|
-| Phone | 13812345678 | 138****5678 |
-| Email | user@example.com | u***@example.com |
-| ID Card | 110101199001011234 | 1101**********1234 |
-| Bank Card | 6222021234567890123 | 6222**********0123 |
-| Address | 北京市朝阳区xx街道xx号 | 北京市朝阳区****** |
+| # | Feature | Priority | Pattern(s) | Interview Value |
+|---|---------|----------|------------|-----------------|
+| **F1** | Entity-change auditing via interceptor | High | Interceptor | explains cross-cutting cleanly |
+| **F2** | Context enrichment (user, correlation, timestamp) | High | DIP | shows operational thinking |
+| **F3** | PII masking policy (optional decorator) | High | Decorator | “enterprise hygiene” without bloat |
+| **F4** | Timeline query by entity/correlation | High | CQRS-style reads | demonstrates support workflows |
+| **F5** | Domain-action audit (dispatch, booking, refund) | Medium | Event stream mindset | shows real-world coverage |
 
 ---
 
 ## 🎨 Design Pattern Application
 
-### EF Core Interceptor Pattern
+### Interceptor Pattern (核心)
+
+Intercept at boundaries so domain code stays clean:
+
+- **DB Save**: capture entity changes (`Added/Modified/Deleted`)
+- **Request pipeline**: capture endpoint + status + duration (minimal)
+- **Domain action hook**: capture business decisions/events (e.g., carrier chosen)
+
+Compact mental model:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    EF CORE INTERCEPTOR PATTERN                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────┐         ┌─────────────────────────┐            │
-│  │  Application    │         │   AuditInterceptor      │            │
-│  │  Code           │         │ : SaveChangesInterceptor│            │
-│  │                 │         ├─────────────────────────┤            │
-│  │  _context       │         │ + SavingChanges()       │            │
-│  │    .SaveChanges │────────>│ + SavedChanges()        │            │
-│  │                 │         │ + SaveChangesFailed()   │            │
-│  └─────────────────┘         └───────────┬─────────────┘            │
-│                                          │                          │
-│                                          │ captures                 │
-│                                          ▼                          │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                    ChangeTracker                            │    │
-│  │  ────────────────────────────────────────────────────────   │    │
-│  │  Entries<IAuditableEntity>()                                │    │
-│  │    .Where(e => e.State == Added | Modified | Deleted)       │    │
-│  │                                                             │    │
-│  │  For each entry:                                            │    │
-│  │    - EntityType                                             │    │
-│  │    - EntityId                                               │    │
-│  │    - State (Added/Modified/Deleted)                         │    │
-│  │    - OriginalValues (for Modified/Deleted)                  │    │
-│  │    - CurrentValues (for Added/Modified)                     │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                          │                          │
-│                                          │ writes to                │
-│                                          ▼                          │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                    AuditLog Table                           │    │
-│  │  ────────────────────────────────────────────────────────   │    │
-│  │  Id | EntityType | EntityId | Action | OldValues | NewValues│    │
-│  │  UserId | Timestamp | CorrelationId | IpAddress | ...       │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+Business code (clean) → framework boundary → interceptor captures → audit sink appends
 ```
 
-### Audit Flow Architecture
+### Dependency Inversion (storage + time + correlation)
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    AUDIT FLOW ARCHITECTURE                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                      Audit Sources                            │   │
-│  │  ─────────────────────────────────────────────────────────   │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐    │   │
-│  │  │ EF Core  │ │ API      │ │ Domain   │ │ External     │    │   │
-│  │  │ Changes  │ │ Requests │ │ Events   │ │ API Calls    │    │   │
-│  │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘    │   │
-│  └───────┼────────────┼────────────┼──────────────┼─────────────┘   │
-│          │            │            │              │                  │
-│          └────────────┴────────────┴──────────────┘                  │
-│                              │                                       │
-│                              ▼                                       │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    Audit Service                              │   │
-│  │  ─────────────────────────────────────────────────────────   │   │
-│  │  + EnrichWithContext() - Add user, correlation, timestamp    │   │
-│  │  + MaskSensitiveData() - PII masking                         │   │
-│  │  + Classify() - Determine category and retention             │   │
-│  │  + Persist() - Write to audit store                          │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                              │                                       │
-│                              ▼                                       │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    Audit Store                                │   │
-│  │  ─────────────────────────────────────────────────────────   │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │   │
-│  │  │ SQL Server  │  │ Blob Storage│  │ Search Index        │   │   │
-│  │  │ (Primary)   │  │ (Archive)   │  │ (Elasticsearch)     │   │   │
-│  │  │             │  │             │  │                     │   │   │
-│  │  │ Hot data    │  │ Cold data   │  │ Fast queries        │   │   │
-│  │  │ < 90 days   │  │ > 90 days   │  │ Full-text search    │   │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
+- Core depends on `IAuditSink`, not on SQL/Elastic/etc.
+- Core depends on `IClock` and `ICorrelationIdProvider` for deterministic tests.
 
-### Why Interceptor Pattern?
+### Optional Decorator (PII masking)
 
-| Benefit | Audit Application |
-|---------|-------------------|
-| **Transparent** | No changes to business code required |
-| **Consistent** | Every save operation is captured |
-| **Centralized** | Single place for audit logic |
-| **Extensible** | Easy to add new audit rules |
-| **Testable** | Interceptor can be tested in isolation |
+Instead of “remember to mask everywhere”, put masking in a wrapper:
+
+- `MaskingAuditSinkDecorator : IAuditSink` wraps a real sink
+- Applies policy rules to `AuditRecord.Payload` before writing
 
 ---
 
-## � Enhanced Pattern Integration
+## 📜 Interface Contracts
 
-### Performance-Optimized Interceptor Architecture (高性能拦截器架构)
+Conceptual C# contracts (learning edition — not full implementation).
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    HIGH-PERFORMANCE AUDIT INTERCEPTOR                               │
-│                    高性能审计拦截器架构                                               │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                     │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │                         AuditInterceptor                                     │   │
-│  │  ────────────────────────────────────────────────────────────────────────    │   │
-│  │                                                                              │   │
-│  │   SavingChanges()                                                            │   │
-│  │       │                                                                      │   │
-│  │       ▼                                                                      │   │
-│  │   ┌─────────────────────────────────────────────────────────────────────┐    │   │
-│  │   │  Object Pool (对象池)                                                │    │   │
-│  │   │  ─────────────────────────────────────────────────────────────────  │   │   │
-│  │   │  • Rent AuditEntry from pool (avoid GC pressure)                    │   │   │
-│  │   │  • Pre-allocated buffer for serialization                           │   │   │
-│  │   │  • Reusable StringBuilder for JSON construction                     │   │   │
-│  │   │                                                                     │   │   │
-│  │   │  Implementation:                                                    │   │   │
-│  │   │  private readonly ObjectPool<AuditEntry> _entryPool;                │   │   │
-│  │   │  private readonly ArrayPool<byte> _bufferPool;                      │   │   │
-│  │   └─────────────────────────────────────────────────────────────────────┘   │   │
-│  │       │                                                                      │   │
-│  │       ▼                                                                      │   │
-│  │   ┌─────────────────────────────────────────────────────────────────────┐   │   │
-│  │   │  Async Channel Queue (异步通道队列)                                  │   │   │
-│  │   │  ─────────────────────────────────────────────────────────────────  │   │   │
-│  │   │                                                                     │   │   │
-│  │   │  Main Thread          Channel<AuditEntry>         Background Writer │   │   │
-│  │   │  ┌─────────┐         ┌──────────────────┐         ┌─────────────┐  │   │   │
-│  │   │  │ Capture │ ──────▶ │  Bounded(10000)  │ ──────▶ │ Batch Write │  │   │   │
-│  │   │  │ Changes │  async  │  SingleReader    │  await  │ to Storage  │  │   │   │
-│  │   │  └─────────┘         └──────────────────┘         └─────────────┘  │   │   │
-│  │   │       │                                                    │       │   │   │
-│  │   │       │ Non-blocking                                       │       │   │   │
-│  │   │       │ (< 1ms overhead)                        Batch size: 100    │   │   │
-│  │   │       │                                         Flush interval: 5s │   │   │
-│  │   │       ▼                                                    │       │   │   │
-│  │   │   SaveChanges()                                            │       │   │   │
-│  │   │   continues immediately                                    │       │   │   │
-│  │   │                                                            ▼       │   │   │
-│  │   │                                              ┌─────────────────────┐│   │   │
-│  │   │                                              │  Bulk Insert        ││   │   │
-│  │   │                                              │  to AuditLog table  ││   │   │
-│  │   │                                              └─────────────────────┘│   │   │
-│  │   └─────────────────────────────────────────────────────────────────────┘   │   │
-│  │                                                                              │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                      │
-│  Benefits:                                                                           │
-│  ✅ Main transaction NOT blocked by audit writes                                    │
-│  ✅ Object pooling reduces GC pressure (高并发场景关键)                              │
-│  ✅ Batch writes reduce database round-trips                                        │
-│  ✅ Bounded channel provides backpressure (防止OOM)                                  │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+### Audit writing
+
+```csharp
+public interface IAuditSink
+{
+    Task AppendAsync(AuditRecord record, CancellationToken ct = default);
+}
+
+public interface ICorrelationIdProvider
+{
+    string GetCorrelationId();
+}
+
+public interface IAuditClock
+{
+    DateTimeOffset UtcNow { get; }
+}
 ```
 
-### Decorator Pattern for PII Masking (装饰器模式脱敏)
+### Capture hooks
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    DECORATOR PATTERN FOR AUDIT PROCESSING                            │
-│                    审计处理装饰器模式                                                 │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │  <<interface>> IAuditProcessor                                                │   │
-│  │  ──────────────────────────────────────────────────────────────────────────  │   │
-│  │  + ProcessAsync(AuditEntry entry) : Task<AuditEntry>                         │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                        △                                            │
-│                                        │                                            │
-│         ┌──────────────────────────────┼──────────────────────────────┐            │
-│         │                              │                              │            │
-│         │                              │                              │            │
-│  ┌──────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐     │
-│  │ CoreAuditProcessor│    │ PIIMaskingDecorator  │    │ HashingDecorator     │     │
-│  │ (核心审计处理)     │    │ (PII脱敏装饰器)       │    │ (哈希装饰器)          │     │
-│  ├──────────────────┤    ├──────────────────────┤    ├──────────────────────┤     │
-│  │ • Serialize values│    │ • Detect PII fields  │    │ • Hash sensitive IDs │     │
-│  │ • Set timestamps  │    │ • Apply masking rules│    │ • Create integrity   │     │
-│  │ • Set correlation │    │ • Phone: 138****5678 │    │   checksum           │     │
-│  │                   │    │ • Email: u***@xx.com │    │                      │     │
-│  └──────────────────┘    └──────────────────────┘    └──────────────────────┘     │
-│                                                                                      │
-│  Decoration Chain (装饰链):                                                          │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
-│  │                                                                             │    │
-│  │  AuditEntry ──▶ HashingDecorator ──▶ PIIMaskingDecorator ──▶ CoreProcessor  │    │
-│  │                                                                             │    │
-│  │  Order of decoration matters:                                               │    │
-│  │  1. Hashing first (on raw data)                                             │    │
-│  │  2. PII masking second (for storage)                                        │    │
-│  │  3. Core processing last (serialize & persist)                              │    │
-│  │                                                                             │    │
-│  └─────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                      │
-│  Configuration:                                                                      │
-│  services.AddScoped<IAuditProcessor>(sp =>                                          │
-│      new HashingDecorator(                                                          │
-│          new PIIMaskingDecorator(                                                   │
-│              new CoreAuditProcessor(sp.GetService<IAuditStore>()))));               │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+```csharp
+public interface IEntityChangeInterceptor
+{
+    IEnumerable<AuditRecord> CaptureEntityChanges(object dbContext);
+}
+
+public interface IRequestAuditInterceptor
+{
+    AuditRecord CaptureRequest(RequestAuditInput input);
+}
+
+public interface IDomainActionAuditor
+{
+    AuditRecord CaptureDomainAction(DomainActionInput input);
+}
 ```
 
-### Chain of Responsibility for PII Discovery (责任链模式PII发现)
+### Read-only audit queries
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    PII DISCOVERY CHAIN (PII发现责任链)                               │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  Input: Field name + value                                                          │
-│                                                                                      │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
-│  │  Attribute   │───▶│   Regex      │───▶│   ML-Based   │───▶│   Default    │      │
-│  │  Handler     │    │   Handler    │    │   Handler    │    │   Handler    │      │
-│  │              │    │              │    │              │    │              │      │
-│  │ [SensitiveData]   │ Phone pattern│    │ NER model    │    │ No masking   │      │
-│  │ attribute?   │    │ Email pattern│    │ for names,   │    │ (pass through)      │
-│  │              │    │ IDCard pattern    │ addresses    │    │              │      │
-│  └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘      │
-│         │                   │                   │                   │              │
-│         │ handled?          │ handled?          │ handled?          │              │
-│         ▼                   ▼                   ▼                   ▼              │
-│    ┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐        │
-│    │ Mask &  │         │ Mask &  │         │ Mask &  │         │ Return  │        │
-│    │ Return  │         │ Return  │         │ Return  │         │ as-is   │        │
-│    └─────────┘         └─────────┘         └─────────┘         └─────────┘        │
-│                                                                                      │
-│  PII Patterns (正则模式):                                                            │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
-│  │  Type        │ Pattern                              │ Mask Result           │    │
-│  │  ───────────────────────────────────────────────────────────────────────── │    │
-│  │  Phone (CN)  │ 1[3-9]\d{9}                          │ 138****5678           │    │
-│  │  Email       │ [\w.-]+@[\w.-]+                       │ u***@example.com      │    │
-│  │  ID Card     │ \d{17}[\dXx]                          │ 1101**********1234    │    │
-│  │  Bank Card   │ \d{16,19}                             │ 6222**********0123    │    │
-│  │  IP Address  │ \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}  │ 192.168.***.***       │    │
-│  └─────────────────────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
+```csharp
+public interface IAuditQueryService
+{
+    Task<IReadOnlyList<AuditRecord>> GetTimelineByEntityAsync(
+        string entityType,
+        string entityId,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        CancellationToken ct = default);
 
-### Strategy Pattern for Storage (策略模式存储)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    STORAGE STRATEGY PATTERN (存储策略模式)                           │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │  <<interface>> IAuditStorageStrategy                                         │   │
-│  │  ──────────────────────────────────────────────────────────────────────────  │   │
-│  │  + SerializeAsync(AuditEntry entry) : Task<byte[]>                           │   │
-│  │  + StoreAsync(byte[] data) : Task                                            │   │
-│  │  + QueryAsync(AuditQuery query) : Task<IEnumerable<AuditLog>>                │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                        ^                                            │
-│                                        │                                            │
-│         ┌──────────────────────────────┼──────────────────────────────┐             │
-│         │                              │                              │             │
-│  ┌──────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐       │
-│  │ SqlServerStrategy│    │ CosmosDbStrategy     │    │ BlobArchiveStrategy  │        │
-│  │ (热数据 <90天)    │    │ (高吞吐场景)          │    │ (冷数据归档)          │       │
-│  ├──────────────────┤    ├──────────────────────┤    ├──────────────────────┤     │
-│  │ • JSON serialize │    │ • BSON serialize     │    │ • Parquet format     │     │
-│  │ • Complex queries│    │ • Partition by date  │    │ • Compressed storage │     │
-│  │ • ACID compliance│    │ • Auto-scale RU      │    │ • Low-cost retention │     │
-│  └──────────────────┘    └──────────────────────┘    └──────────────────────┘     │
-│                                                                                      │
-│  Strategy Selection (策略选择):                                                      │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
-│  │  public class AuditStorageSelector                                          │    │
-│  │  {                                                                          │    │
-│  │      public IAuditStorageStrategy SelectStrategy(AuditEntry entry)          │    │
-│  │      {                                                                      │    │
-│  │          // High-volume entities → CosmosDB                                 │    │
-│  │          if (entry.EntityType is "TrackingEvent" or "LocationUpdate")       │    │
-│  │              return _cosmosStrategy;                                        │    │
-│  │                                                                             │    │
-│  │          // Compliance-critical → SQL Server                                │    │
-│  │          if (entry.Category == AuditCategory.Compliance)                    │    │
-│  │              return _sqlStrategy;                                           │    │
-│  │                                                                             │    │
-│  │          // Old data → Blob Archive                                         │    │
-│  │          if (entry.Timestamp < DateTime.UtcNow.AddDays(-90))                │    │
-│  │              return _blobStrategy;                                          │    │
-│  │                                                                             │    │
-│  │          return _sqlStrategy; // Default                                    │    │
-│  │      }                                                                      │    │
-│  │  }                                                                          │    │
-│  └─────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+    Task<IReadOnlyList<AuditRecord>> GetByCorrelationIdAsync(
+        string correlationId,
+        CancellationToken ct = default);
+}
 ```
 
 ---
 
-## 📊 Observability & Self-Monitoring
+## 📣 Audit Events (Minimal Catalog)
 
-### Audit System Health Metrics (审计系统健康指标)
+Keep the catalog small; prefer “high signal” events.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    AUDIT OBSERVABILITY DASHBOARD                                     │
-│                    审计可观测性仪表板                                                 │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║                         HEALTH METRICS (健康指标)                              ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐   ║  │
-│  ║  │ Write Success Rate  │  │ Processing Latency  │  │ Queue Backlog       │   ║  │
-│  ║  │                     │  │                     │  │                     │   ║  │
-│  ║  │      99.97%         │  │   p50: 2ms          │  │      127            │   ║  │
-│  ║  │      ████████░      │  │   p95: 15ms         │  │      ██░░░░░░░░     │   ║  │
-│  ║  │                     │  │   p99: 45ms         │  │      (of 10000)     │   ║  │
-│  ║  │  Target: >99.9%     │  │   Target: <50ms     │  │  Target: <1000      │   ║  │
-│  ║  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘   ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                                                                      │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║                         DATA OVERVIEW (数据概况)                               ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  Daily Event Volume: 2.5M events                                              ║  │
-│  ║  ┌─────────────────────────────────────────────────────────────────────────┐  ║  │
-│  ║  │  By Entity Type                    │  By Operation                      │  ║  │
-│  ║  │  ─────────────────────────────────────────────────────────────────────  │  ║  │
-│  ║  │  Order          ████████████  35%  │  Create    ███████    28%          │  ║  │
-│  ║  │  Shipment       █████████     25%  │  Update    ██████████████  55%     │  ║  │
-│  ║  │  TrackingEvent  ████████      22%  │  Delete    ██           7%          │  ║  │
-│  ║  │  Customer       ███           10%  │  Access    ████        10%          │  ║  │
-│  ║  │  Other          ██            8%   │                                     │  ║  │
-│  ║  └─────────────────────────────────────────────────────────────────────────┘  ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                                                                      │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║                         SYSTEM LOAD (系统负荷)                                 ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  Storage Growth Trend (存储增长趋势):                                          ║  │
-│  ║  ┌─────────────────────────────────────────────────────────────────────────┐  ║  │
-│  ║  │  250GB ┤                                                           ╱    │  ║  │
-│  ║  │  200GB ┤                                                      ╱───╱     │  ║  │
-│  ║  │  150GB ┤                                              ╱──────╱          │  ║  │
-│  ║  │  100GB ┤                                    ╱────────╱                  │  ║  │
-│  ║  │   50GB ┤                        ╱──────────╱                            │  ║  │
-│  ║  │    0GB ┼──────────────────────────────────────────────────────────────  │  ║  │
-│  ║  │        Jan    Feb    Mar    Apr    May    Jun    Jul                    │  ║  │
-│  ║  └─────────────────────────────────────────────────────────────────────────┘  ║  │
-│  ║                                                                               ║  │
-│  ║  Query API Metrics:                                                           ║  │
-│  ║  • QPS: 450 req/s  │  Avg Response: 120ms  │  Error Rate: 0.02%              ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
+| Category | Event | Example Source |
+|----------|-------|----------------|
+| Data change | `EntityChanged` | EF Core Save interceptor |
+| Request | `ApiRequestCompleted` | middleware / request interceptor |
+| Business action | `OrderDispatched` | 04 command handler / domain event hook |
+| Business action | `CarrierBooked` | 02 booking result |
+| Business action | `RefundProcessed` | 04 refund command |
+| Tracking | `TrackingStatusChanged` | 03 event consumption hook |
 
-### Alert Rules (告警规则)
+Notes:
 
-| Alert Name | Condition | Severity | Action |
-|------------|-----------|----------|--------|
-| **AuditWriteFailure** | Write success rate < 99% | 🔴 Critical | Page on-call, investigate immediately |
-| **HighProcessingLatency** | p99 latency > 100ms for 5 min | 🟡 Warning | Check queue depth, scale workers |
-| **QueueBacklogHigh** | Queue depth > 5000 for 10 min | 🟡 Warning | Scale consumers, check storage |
-| **MissingOrderEvents** | No Order audit events for 5 min | 🔴 Critical | Verify interceptor health |
-| **StorageGrowthAnomaly** | Growth > 150% of 7-day avg | 🟡 Warning | Review retention, check duplicates |
-| **QueryAPISlowdown** | Avg response > 500ms | 🟡 Warning | Check indexes, scale read replicas |
-
-### Metrics Collection (指标采集)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    METRICS COLLECTION ARCHITECTURE                                   │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  ┌──────────────────┐                                                               │
-│  │  AuditInterceptor │                                                               │
-│  │  ──────────────── │                                                               │
-│  │  • audit_write_total{status="success|failure"}                                   │
-│  │  • audit_write_duration_seconds{quantile="0.5|0.95|0.99"}                        │
-│  │  • audit_queue_depth                                                             │
-│  │  • audit_batch_size                                                              │
-│  └────────┬─────────┘                                                               │
-│           │                                                                          │
-│           │ Prometheus metrics                                                       │
-│           ▼                                                                          │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐              │
-│  │   Prometheus     │───▶│    Grafana       │───▶│   Alert Manager  │              │
-│  │   (收集)          │    │   (可视化)        │    │   (告警)          │              │
-│  └──────────────────┘    └──────────────────┘    └──────────────────┘              │
-│                                                                                      │
-│  Key Metrics Definition:                                                            │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
-│  │  // Counters                                                                │    │
-│  │  audit_events_total{entity_type, action, category}                          │    │
-│  │  audit_write_failures_total{error_type}                                     │    │
-│  │                                                                             │    │
-│  │  // Gauges                                                                  │    │
-│  │  audit_queue_depth                                                          │    │
-│  │  audit_storage_bytes{tier="hot|warm|cold"}                                  │    │
-│  │                                                                             │    │
-│  │  // Histograms                                                              │    │
-│  │  audit_write_latency_seconds                                                │    │
-│  │  audit_query_latency_seconds                                                │    │
-│  │  audit_serialization_bytes                                                  │    │
-│  └─────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
+- We don’t aim for “log everything”. We aim for **answering investigations**.
+- When in doubt: log *state transitions* and *external interactions*.
 
 ---
 
-## �📜 Interface Contracts
+## 🧱 Data Models
 
-### IAuditableEntity (Marker Interface)
+### Core record
 
-```
-Interface: IAuditableEntity
-Namespace: DT.Express.Domain.Common
-Purpose: Mark entities for automatic audit tracking
-
-Properties:
-┌────────────────────────────────────────────────────────────┐
-│ DateTime CreatedAt { get; set; }                           │
-│   - When entity was created                                │
-├────────────────────────────────────────────────────────────┤
-│ string CreatedBy { get; set; }                             │
-│   - User who created entity                                │
-├────────────────────────────────────────────────────────────┤
-│ DateTime UpdatedAt { get; set; }                           │
-│   - Last modification time                                 │
-├────────────────────────────────────────────────────────────┤
-│ string UpdatedBy { get; set; }                             │
-│   - User who last modified                                 │
-└────────────────────────────────────────────────────────────┘
+```csharp
+public sealed record AuditRecord(
+    string Id,
+    string Category,
+    string EventType,
+    string CorrelationId,
+    string ActorId,
+    DateTimeOffset OccurredAt,
+    string? EntityType,
+    string? EntityId,
+    object Payload);
 ```
 
-### IAuditService (Application Service)
+### Payload examples (conceptual)
 
-```
-Interface: IAuditService
-Namespace: DT.Express.Application.Services
-Purpose: Query and manage audit logs
+- `EntityChangedPayload`:
+  - operation: `Added|Modified|Deleted`
+  - before/after: dictionary of changed fields
+- `ApiRequestCompletedPayload`:
+  - method, path, statusCode, durationMs
+- `OrderDispatchedPayload`:
+  - orderId, routeId, chosenCarrierCode, trackingNumber
 
-Methods:
-┌────────────────────────────────────────────────────────────┐
-│ Task<PagedResult<AuditLogDto>> QueryLogsAsync(             │
-│     AuditQueryRequest query)                               │
-│   - Query audit logs with filters                          │
-│   - Supports: entity type, date range, user, action        │
-├────────────────────────────────────────────────────────────┤
-│ Task<List<AuditLogDto>> GetEntityHistoryAsync(             │
-│     string entityType, string entityId)                    │
-│   - Get complete history for one entity                    │
-├────────────────────────────────────────────────────────────┤
-│ Task<AuditTimelineDto> GetTimelineAsync(                   │
-│     string correlationId)                                  │
-│   - Get all events for a business operation                │
-├────────────────────────────────────────────────────────────┤
-│ Task<ComplianceReportDto> GenerateReportAsync(             │
-│     ReportType type, DateRange range)                      │
-│   - Generate compliance report                             │
-├────────────────────────────────────────────────────────────┤
-│ Task LogCustomEventAsync(AuditEvent auditEvent)            │
-│   - Log custom business event (not entity change)          │
-└────────────────────────────────────────────────────────────┘
-```
+### PII masking rules (minimal)
 
-### AuditInterceptor (EF Core Interceptor)
-
-```
-Class: AuditInterceptor
-Inherits: SaveChangesInterceptor
-Namespace: DT.Express.Infrastructure.Audit
-Purpose: Capture entity changes during SaveChanges
-
-Methods:
-┌────────────────────────────────────────────────────────────┐
-│ InterceptionResult<int> SavingChanges(                     │
-│     DbContextEventData eventData,                          │
-│     InterceptionResult<int> result)                        │
-│   - Called before SaveChanges executes                     │
-│   - Capture original values for modified entities          │
-├────────────────────────────────────────────────────────────┤
-│ int SavedChanges(                                          │
-│     SaveChangesCompletedEventData eventData,               │
-│     int result)                                            │
-│   - Called after SaveChanges succeeds                      │
-│   - Persist audit records                                  │
-├────────────────────────────────────────────────────────────┤
-│ void SaveChangesFailed(                                    │
-│     DbContextErrorEventData eventData)                     │
-│   - Called when SaveChanges fails                          │
-│   - Log failed operation attempt                           │
-└────────────────────────────────────────────────────────────┘
-
-Private Methods:
-┌────────────────────────────────────────────────────────────┐
-│ List<AuditEntry> CaptureChanges(ChangeTracker tracker)     │
-│   - Extract changed entities from tracker                  │
-│   - Build audit entries with before/after values           │
-├────────────────────────────────────────────────────────────┤
-│ AuditContext GetAuditContext()                             │
-│   - Get current user from HttpContext                      │
-│   - Get correlation ID from headers                        │
-│   - Get client IP address                                  │
-└────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📨 Audit Event Specifications
-
-### Event: EntityChanged
-
-```
-Event: EntityChanged
-Category: Data Change
-Trigger: Entity added, modified, or deleted
-
-Payload:
-┌────────────────────────────────────────────────────────────┐
-│  Id             │ Guid           │ Unique audit ID         │
-│  EntityType     │ string         │ "Order", "Shipment"     │
-│  EntityId       │ string         │ Primary key value       │
-│  Action         │ AuditAction    │ Create/Update/Delete    │
-│  OldValues      │ JsonDocument   │ Values before (if any)  │
-│  NewValues      │ JsonDocument   │ Values after (if any)   │
-│  ChangedFields  │ List<string>   │ Modified properties     │
-│  UserId         │ string         │ Who made the change     │
-│  UserName       │ string         │ Display name            │
-│  Timestamp      │ DateTime       │ When it happened        │
-│  CorrelationId  │ string         │ Request correlation     │
-│  IpAddress      │ string         │ Client IP               │
-│  UserAgent      │ string         │ Client info             │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Event: BusinessAction
-
-```
-Event: BusinessAction
-Category: Business Action
-Trigger: Significant business operation
-
-Payload:
-┌────────────────────────────────────────────────────────────┐
-│  Id             │ Guid           │ Unique audit ID         │
-│  ActionType     │ string         │ "OrderDispatched", etc  │
-│  EntityType     │ string         │ Related entity type     │
-│  EntityId       │ string         │ Related entity ID       │
-│  Description    │ string         │ Human-readable summary  │
-│  Details        │ JsonDocument   │ Action-specific data    │
-│  UserId         │ string         │ Who performed action    │
-│  Timestamp      │ DateTime       │ When performed          │
-│  CorrelationId  │ string         │ Request correlation     │
-│  Outcome        │ string         │ Success/Failure/Partial │
-└────────────────────────────────────────────────────────────┘
-
-Examples:
-┌────────────────────────────────────────────────────────────┐
-│  ActionType: "CarrierSelected"                             │
-│  EntityType: "Shipment"                                    │
-│  EntityId: "abc-123"                                       │
-│  Details: {                                                │
-│    "SelectedCarrier": "SF",                                │
-│    "Reason": "Lowest cost",                                │
-│    "AlternativesConsidered": ["JD", "ZTO"],               │
-│    "Quote": 15.50                                          │
-│  }                                                         │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Event: ExternalApiCall
-
-```
-Event: ExternalApiCall
-Category: API Call
-Trigger: Call to external service
-
-Payload:
-┌────────────────────────────────────────────────────────────┐
-│  Id             │ Guid           │ Unique audit ID         │
-│  ServiceName    │ string         │ "SFExpress", "Amap"     │
-│  Endpoint       │ string         │ API endpoint called     │
-│  Method         │ string         │ GET/POST/PUT            │
-│  RequestBody    │ string         │ Sanitized request       │
-│  ResponseStatus │ int            │ HTTP status code        │
-│  ResponseBody   │ string         │ Sanitized response      │
-│  DurationMs     │ long           │ Call duration           │
-│  Timestamp      │ DateTime       │ When called             │
-│  CorrelationId  │ string         │ Request correlation     │
-│  Success        │ bool           │ Whether call succeeded  │
-│  ErrorMessage   │ string         │ Error if failed         │
-└────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📊 Data Models
-
-### AuditLog (Primary Storage)
-
-| Property | Type | Description |
-|----------|------|-------------|
-| Id | Guid | Unique identifier |
-| EntityType | string | Entity class name |
-| EntityId | string | Primary key (string for flexibility) |
-| Action | AuditAction | Create/Update/Delete |
-| OldValues | string (JSON) | Serialized old values |
-| NewValues | string (JSON) | Serialized new values |
-| ChangedFields | string | Comma-separated field names |
-| UserId | string | User identifier |
-| UserName | string | User display name |
-| Timestamp | DateTime | UTC timestamp |
-| CorrelationId | string | Request tracking ID |
-| IpAddress | string | Client IP |
-| UserAgent | string | Client browser/app |
-| Category | AuditCategory | Classification |
-| Severity | AuditSeverity | Info/Warning/Critical |
-
-### AuditAction (Enum)
-
-| Value | Name | Description |
-|-------|------|-------------|
-| 0 | Create | New entity created |
-| 1 | Update | Entity modified |
-| 2 | Delete | Entity deleted |
-| 3 | SoftDelete | Entity marked deleted |
-| 4 | Access | Entity accessed/viewed |
-| 5 | Export | Data exported |
-
-### AuditCategory (Enum)
-
-| Value | Name | Retention | Examples |
-|-------|------|-----------|----------|
-| 0 | Security | 2 years | Login, permission change |
-| 1 | DataChange | 1 year | Entity CRUD |
-| 2 | BusinessAction | 3 years | Dispatch, delivery |
-| 3 | SystemEvent | 90 days | Service events |
-| 4 | ApiCall | 180 days | External API |
-| 5 | Compliance | 7 years | Financial, customs |
-
-### AuditQueryRequest (Query DTO)
-
-| Property | Type | Description |
-|----------|------|-------------|
-| EntityType | string | Filter by entity type |
-| EntityId | string | Filter by specific entity |
-| Action | AuditAction? | Filter by action |
-| UserId | string | Filter by user |
-| StartDate | DateTime | Date range start |
-| EndDate | DateTime | Date range end |
-| SearchTerm | string | Full-text search |
-| Category | AuditCategory? | Filter by category |
-| Page | int | Pagination |
-| PageSize | int | Page size |
-| SortBy | string | Sort field |
-| SortDesc | bool | Sort direction |
-
----
-
-## � Audit Data Lifecycle Management
-
-### Tiered Storage Architecture (分层存储架构)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    TIERED STORAGE ARCHITECTURE (分层存储)                            │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │                              DATA FLOW                                        │   │
-│  │                                                                              │   │
-│  │   New Audit Event                                                            │   │
-│  │        │                                                                     │   │
-│  │        ▼                                                                     │   │
-│  │   ╔═══════════════════════════════════════════════════════════════════════╗ │   │
-│  │   ║  HOT TIER (热数据层)                                      < 90 days   ║ │   │
-│  │   ║  ─────────────────────────────────────────────────────────────────── ║ │   │
-│  │   ║  Storage: Azure SQL Database / SQL Server                            ║ │   │
-│  │   ║  Features:                                                           ║ │   │
-│  │   ║    • Full indexing for fast queries                                  ║ │   │
-│  │   ║    • Complex filters and aggregations                                ║ │   │
-│  │   ║    • Real-time dashboard support                                     ║ │   │
-│  │   ║    • ACID compliance for recent data                                 ║ │   │
-│  │   ║  Cost: $$$$ (premium storage)                                        ║ │   │
-│  │   ╚══════════════════════════════════════════╪════════════════════════════╝ │   │
-│  │                                              │                               │   │
-│  │                                              │ 90-day archive job            │   │
-│  │                                              ▼                               │   │
-│  │   ╔═══════════════════════════════════════════════════════════════════════╗ │   │
-│  │   ║  WARM TIER (温数据层)                              90 days - 2 years  ║ │   │
-│  │   ║  ─────────────────────────────────────────────────────────────────── ║ │   │
-│  │   ║  Storage: Azure Blob Cool / AWS S3 Infrequent Access                 ║ │   │
-│  │   ║  Format: Parquet files (compressed, columnar)                        ║ │   │
-│  │   ║  Features:                                                           ║ │   │
-│  │   ║    • Partitioned by date (year/month/day)                            ║ │   │
-│  │   ║    • Indexed via Azure Data Lake / Athena                            ║ │   │
-│  │   ║    • Query latency: seconds (acceptable for investigation)           ║ │   │
-│  │   ║  Cost: $$ (cool storage)                                             ║ │   │
-│  │   ╚══════════════════════════════════════════╪════════════════════════════╝ │   │
-│  │                                              │                               │   │
-│  │                                              │ 2-year archive job            │   │
-│  │                                              ▼                               │   │
-│  │   ╔═══════════════════════════════════════════════════════════════════════╗ │   │
-│  │   ║  COLD TIER (冷数据层)                              2 years - 7 years  ║ │   │
-│  │   ║  ─────────────────────────────────────────────────────────────────── ║ │   │
-│  │   ║  Storage: Azure Archive / AWS Glacier                                ║ │   │
-│  │   ║  Features:                                                           ║ │   │
-│  │   ║    • Compliance retention only                                       ║ │   │
-│  │   ║    • Retrieval requires hours (acceptable for audits)                ║ │   │
-│  │   ║    • WORM (Write Once Read Many) for tamper-proof                    ║ │   │
-│  │   ║  Cost: $ (archive storage)                                           ║ │   │
-│  │   ╚══════════════════════════════════════════╪════════════════════════════╝ │   │
-│  │                                              │                               │   │
-│  │                                              │ Retention expiry              │   │
-│  │                                              ▼                               │   │
-│  │   ╔═══════════════════════════════════════════════════════════════════════╗ │   │
-│  │   ║  SECURE DELETION (安全删除)                           > retention    ║ │   │
-│  │   ║  ─────────────────────────────────────────────────────────────────── ║ │   │
-│  │   ║  • Cryptographic erasure (delete encryption keys)                    ║ │   │
-│  │   ║  • Audit of deletion (meta-audit)                                    ║ │   │
-│  │   ║  • GDPR compliance证明                                               ║ │   │
-│  │   ╚═══════════════════════════════════════════════════════════════════════╝ │   │
-│  │                                                                              │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Retention Policy by Category (按类别保留策略)
-
-| Category | Hot (SQL) | Warm (Blob) | Cold (Archive) | Total Retention | GDPR Handling |
-|----------|-----------|-------------|----------------|-----------------|---------------|
-| Security | 90 days | 1 year | 1 year | **2 years** | Anonymize after 2y |
-| DataChange | 90 days | 9 months | - | **1 year** | Delete on request |
-| BusinessAction | 90 days | 2 years | 1 year | **3 years** | Anonymize user |
-| SystemEvent | 90 days | - | - | **90 days** | Auto-delete |
-| ApiCall | 90 days | 3 months | - | **180 days** | Auto-delete |
-| Compliance | 90 days | 2 years | 5 years | **7 years** | Immutable |
-
-### Lifecycle Management Service (生命周期管理服务)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    AUDIT LIFECYCLE SERVICE                                           │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  public class AuditLifecycleService : IHostedService                                │
-│  {                                                                                  │
-│      // Scheduled jobs (配合Hangfire/Quartz)                                        │
-│                                                                                      │
-│      [Cron("0 2 * * *")]  // Daily at 2 AM                                          │
-│      public async Task ArchiveHotToWarmAsync()                                       │
-│      {                                                                              │
-│          var cutoff = DateTime.UtcNow.AddDays(-90);                                 │
-│          var records = await _hotStorage.QueryOlderThanAsync(cutoff);               │
-│                                                                                      │
-│          // Convert to Parquet and upload to Blob                                   │
-│          var parquetData = ConvertToParquet(records);                               │
-│          await _warmStorage.UploadAsync(                                            │
-│              $"audit/{cutoff:yyyy}/{cutoff:MM}/{cutoff:dd}.parquet",                │
-│              parquetData);                                                          │
-│                                                                                      │
-│          // Delete from hot storage (keep in Blob)                                  │
-│          await _hotStorage.DeleteOlderThanAsync(cutoff);                            │
-│                                                                                      │
-│          _metrics.RecordArchiveJob("hot_to_warm", records.Count);                   │
-│      }                                                                              │
-│                                                                                      │
-│      [Cron("0 3 1 * *")]  // Monthly on 1st at 3 AM                                 │
-│      public async Task ArchiveWarmToColdAsync()                                      │
-│      {                                                                              │
-│          // Similar logic for 2-year-old data                                       │
-│      }                                                                              │
-│                                                                                      │
-│      [Cron("0 4 1 * *")]  // Monthly on 1st at 4 AM                                 │
-│      public async Task PurgeExpiredAsync()                                           │
-│      {                                                                              │
-│          foreach (var category in Enum.GetValues<AuditCategory>())                  │
-│          {                                                                          │
-│              var retention = GetRetentionPolicy(category);                          │
-│              var cutoff = DateTime.UtcNow.Add(-retention.TotalRetention);           │
-│                                                                                      │
-│              await _coldStorage.DeleteOlderThanAsync(category, cutoff);             │
-│                                                                                      │
-│              // Log the purge itself (meta-audit)                                   │
-│              await _auditService.LogCustomEventAsync(new AuditEvent                 │
-│              {                                                                      │
-│                  ActionType = "AuditDataPurged",                                    │
-│                  Details = new { Category = category, Cutoff = cutoff }             │
-│              });                                                                    │
-│          }                                                                          │
-│      }                                                                              │
-│  }                                                                                  │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### GDPR "Right to be Forgotten" Handling (GDPR被遗忘权处理)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    GDPR ERASURE REQUEST HANDLING                                     │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  Policy: Audit records are NOT physically deleted (breaks audit integrity)          │
-│          Instead, we ANONYMIZE the user reference                                    │
-│                                                                                      │
-│  Before Anonymization:                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
-│  │  {                                                                          │    │
-│  │    "EntityType": "Order",                                                   │    │
-│  │    "Action": "Create",                                                      │    │
-│  │    "UserId": "user-12345",                                                  │    │
-│  │    "UserName": "张三",                                                       │    │
-│  │    "IpAddress": "192.168.1.100",                                            │    │
-│  │    "NewValues": { "CustomerName": "李四", "Phone": "13812345678" }           │    │
-│  │  }                                                                          │    │
-│  └─────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                      │
-│  After Anonymization:                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
-│  │  {                                                                          │    │
-│  │    "EntityType": "Order",                                                   │    │
-│  │    "Action": "Create",                                                      │    │
-│  │    "UserId": "[ANONYMIZED-a1b2c3]",       // Hashed reference               │    │
-│  │    "UserName": "[ANONYMIZED]",                                              │    │
-│  │    "IpAddress": "[ANONYMIZED]",                                             │    │
-│  │    "NewValues": { "CustomerName": "[ANONYMIZED]", "Phone": "[ANONYMIZED]" } │    │
-│  │    "GdprAnonymizedAt": "2026-02-01T10:30:00Z",                              │    │
-│  │    "GdprRequestId": "REQ-789456"                                            │    │
-│  │  }                                                                          │    │
-│  └─────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                      │
-│  Benefits:                                                                          │
-│  ✅ Audit trail remains intact (WHO did something becomes "someone")                │
-│  ✅ GDPR compliance achieved (PII removed)                                          │
-│  ✅ Audit of anonymization itself recorded                                          │
-│  ✅ Can still query by EntityId, Action, Timestamp                                  │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🌊 Real-Time Data Pipeline
-
-### Audit Event Streaming Architecture (审计事件流架构)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    REAL-TIME AUDIT DATA PIPELINE                                     │
-│                    实时审计数据管道                                                   │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│                         ┌─────────────────┐                                         │
-│                         │  Audit Events   │                                         │
-│                         │  (from all      │                                         │
-│                         │   domains)      │                                         │
-│                         └────────┬────────┘                                         │
-│                                  │                                                   │
-│                                  ▼                                                   │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │                    EVENT HUB / KAFKA (事件中心)                               │   │
-│  │  ─────────────────────────────────────────────────────────────────────────   │   │
-│  │  Topic: audit-events                                                         │   │
-│  │  Partitions: 16 (by EntityType hash for ordering)                            │   │
-│  │  Retention: 7 days (replay capability)                                       │   │
-│  │  Throughput: 50,000 events/sec peak                                          │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                  │                                                   │
-│         ┌────────────────────────┼────────────────────────┐                         │
-│         │                        │                        │                         │
-│         ▼                        ▼                        ▼                         │
-│  ╔══════════════════╗   ╔══════════════════╗   ╔══════════════════╗                │
-│  ║  REAL-TIME       ║   ║  ANALYTICS       ║   ║  SECURITY        ║                │
-│  ║  ALERTING        ║   ║  & BI            ║   ║  SIEM            ║                │
-│  ╠══════════════════╣   ╠══════════════════╣   ╠══════════════════╣                │
-│  ║                  ║   ║                  ║   ║                  ║                │
-│  ║  Stream Analytics║   ║  Synapse/        ║   ║  Azure Sentinel  ║                │
-│  ║  ────────────────║   ║  Databricks      ║   ║  ────────────────║                │
-│  ║                  ║   ║  ────────────────║   ║                  ║                │
-│  ║  Anomaly Rules:  ║   ║                  ║   ║  Correlate with: ║                │
-│  ║  • Mass delete   ║   ║  Use Cases:      ║   ║  • Login events  ║                │
-│  ║    (>100/min by  ║   ║  • User behavior ║   ║  • Network logs  ║                │
-│  ║     same user)   ║   ║    analysis      ║   ║  • WAF alerts    ║                │
-│  ║  • After-hours   ║   ║  • System usage  ║   ║                  ║                │
-│  ║    sensitive ops ║   ║    trends        ║   ║  Detect:         ║                │
-│  ║  • Unusual       ║   ║  • Compliance    ║   ║  • Data exfil    ║                │
-│  ║    access pattern║   ║    dashboards    ║   ║  • Insider threat║                │
-│  ║                  ║   ║  • Audit metrics ║   ║  • Account takeover              ║
-│  ╚════════╪═════════╝   ╚════════╪═════════╝   ╚════════╪═════════╝                │
-│           │                      │                      │                          │
-│           ▼                      ▼                      ▼                          │
-│  ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐                │
-│  │  Alert Actions   │   │  Power BI        │   │  Security        │                │
-│  │  • PagerDuty     │   │  Dashboards      │   │  Incident        │                │
-│  │  • Teams/Slack   │   │  • Exec summary  │   │  Response        │                │
-│  │  • Email         │   │  • Ops metrics   │   │  Playbooks       │                │
-│  └──────────────────┘   └──────────────────┘   └──────────────────┘                │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Anomaly Detection Rules (异常检测规则)
-
-| Rule Name | Pattern | Threshold | Alert | Response |
-|-----------|---------|-----------|-------|----------|
-| **MassDelete** | Same user deletes many records | >100 deletes/5min | 🔴 Critical | Auto-suspend user, notify SOC |
-| **AfterHoursAccess** | Sensitive entity access outside business hours | Any access 22:00-06:00 | 🟡 Warning | Log for review |
-| **UnusualGeoAccess** | Access from new geographic location | New country/region | 🟡 Warning | MFA challenge |
-| **PrivilegeEscalation** | Permission changes on admin accounts | Any change | 🔴 Critical | Require approval |
-| **DataExport** | Large data exports | >10,000 records exported | 🟡 Warning | Log, notify manager |
-| **FailedAccessSpike** | Multiple failed access attempts | >10 failures/min | 🟡 Warning | Temp block IP |
-
-### Knowledge Graph for Investigation (调查知识图谱)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    AUDIT KNOWLEDGE GRAPH (审计知识图谱)                              │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  Use Case: "Why was Order #12345 delivered late?"                                   │
-│                                                                                      │
-│                            ┌─────────────┐                                          │
-│                            │   User:     │                                          │
-│                            │   李经理    │                                          │
-│                            └──────┬──────┘                                          │
-│                                   │ modified                                        │
-│                                   ▼                                                 │
-│  ┌───────────┐    ┌───────────────────────────────┐    ┌───────────────┐           │
-│  │ Carrier:  │◀───│        Order #12345           │───▶│  Shipment:    │           │
-│  │ SF Express│    │                               │    │  SHP-789      │           │
-│  └───────────┘    │  Created: 2026-01-30 10:00    │    └───────┬───────┘           │
-│       │           │  Status changes: 5            │            │                    │
-│       │           │  Address modified: 2x         │            │                    │
-│       │           └───────────────────────────────┘            │                    │
-│       │                         │                              │                    │
-│       │                         │ caused                       │                    │
-│       ▼                         ▼                              ▼                    │
-│  ┌───────────┐    ┌───────────────────────────────┐    ┌───────────────┐           │
-│  │ API Call  │    │     Address Change Event      │    │ Route Recalc  │           │
-│  │ (booking) │    │  ─────────────────────────── │    │ (delayed 2hr) │           │
-│  │ @14:00    │    │  Old: 北京市朝阳区xxx         │    │               │           │
-│  │           │    │  New: 北京市海淀区yyy         │    │               │           │
-│  └───────────┘    │  By: 李经理 @15:00            │    └───────────────┘           │
-│                   │  ⚠️ After dispatch!           │                                │
-│                   └───────────────────────────────┘                                │
-│                                                                                      │
-│  Investigation Result:                                                              │
-│  ────────────────────                                                               │
-│  Root Cause: Address changed AFTER carrier booked, causing route recalculation      │
-│  Impact: 2-hour delivery delay                                                      │
-│  Recommendation: Add guard to prevent address change after dispatch                 │
-│                                                                                      │
-│  Graph Query (Gremlin/Cypher):                                                      │
-│  g.V('Order#12345').outE('modified_by','caused','shipped_by').inV().path()         │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🛡️ System Resilience & Deployment
-
-### High Availability Architecture (高可用架构)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    HIGH AVAILABILITY DEPLOYMENT                                      │
-│                    高可用部署架构                                                     │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│                              AZURE REGION: China East                               │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │                                                                              │   │
-│  │   Availability Zone 1           Availability Zone 2           Zone 3        │   │
-│  │   ┌──────────────────┐         ┌──────────────────┐         ┌───────────┐   │   │
-│  │   │ Audit Service    │         │ Audit Service    │         │ Audit     │   │   │
-│  │   │ Instance 1       │         │ Instance 2       │         │ Service   │   │   │
-│  │   │ ──────────────── │         │ ──────────────── │         │ Instance 3│   │   │
-│  │   │ • Channel Queue  │         │ • Channel Queue  │         │           │   │   │
-│  │   │ • Object Pool    │         │ • Object Pool    │         │           │   │   │
-│  │   └────────┬─────────┘         └────────┬─────────┘         └─────┬─────┘   │   │
-│  │            │                            │                         │         │   │
-│  │            └────────────────────────────┼─────────────────────────┘         │   │
-│  │                                         │                                    │   │
-│  │                            ┌────────────┴────────────┐                      │   │
-│  │                            │    Azure Load Balancer  │                      │   │
-│  │                            │    (health checks)      │                      │   │
-│  │                            └────────────┬────────────┘                      │   │
-│  │                                         │                                    │   │
-│  │            ┌────────────────────────────┼────────────────────────────┐      │   │
-│  │            │                            │                            │      │   │
-│  │            ▼                            ▼                            ▼      │   │
-│  │   ┌──────────────────┐         ┌──────────────────┐         ┌───────────┐   │   │
-│  │   │ SQL Server       │◀───────▶│ SQL Server       │         │ SQL Server│   │   │
-│  │   │ Primary          │  sync   │ Secondary        │  async  │ Read      │   │   │
-│  │   │ (Zone 1)         │  repl   │ (Zone 2)         │  repl   │ Replica   │   │   │
-│  │   └──────────────────┘         └──────────────────┘         └───────────┘   │   │
-│  │                                                                              │   │
-│  │   ┌──────────────────────────────────────────────────────────────────────┐   │   │
-│  │   │                    Event Hubs (Multi-Zone)                            │   │   │
-│  │   │   Partition 0   Partition 1   ...   Partition 15                     │   │   │
-│  │   │   (Zone 1)      (Zone 2)            (Zone 3)                         │   │   │
-│  │   └──────────────────────────────────────────────────────────────────────┘   │   │
-│  │                                                                              │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                         │                                           │
-│                                         │ Geo-replication                           │
-│                                         ▼                                           │
-│                              AZURE REGION: China North (DR)                        │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │   • Standby SQL replicas (async replication, RPO < 5 min)                    │   │
-│  │   • Standby Audit Service instances (cold standby)                           │   │
-│  │   • Blob storage geo-redundant (GRS)                                         │   │
-│  │   • RTO: < 1 hour for full failover                                          │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Data Tamper-Proofing (数据防篡改)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    DATA INTEGRITY & TAMPER-PROOFING                                  │
-│                    数据完整性与防篡改                                                 │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │                         HASH CHAIN (哈希链)                                   │   │
-│  │                                                                              │   │
-│  │   Record 1          Record 2          Record 3          Record 4            │   │
-│  │  ┌─────────┐       ┌─────────┐       ┌─────────┐       ┌─────────┐          │   │
-│  │  │ Data    │       │ Data    │       │ Data    │       │ Data    │          │   │
-│  │  │ ─────── │       │ ─────── │       │ ─────── │       │ ─────── │          │   │
-│  │  │ PrevHash│──────▶│ PrevHash│──────▶│ PrevHash│──────▶│ PrevHash│          │   │
-│  │  │ = 0x000 │       │ = H(R1) │       │ = H(R2) │       │ = H(R3) │          │   │
-│  │  │ Hash    │       │ Hash    │       │ Hash    │       │ Hash    │          │   │
-│  │  │ = H(R1) │       │ = H(R2) │       │ = H(R3) │       │ = H(R4) │          │   │
-│  │  └─────────┘       └─────────┘       └─────────┘       └─────────┘          │   │
-│  │                                                                              │   │
-│  │  If any record modified → hash chain breaks → tamper detected!               │   │
-│  │                                                                              │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                      │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐   │
-│  │                         DAILY CHECKPOINT TO BLOCKCHAIN                        │   │
-│  │                                                                              │   │
-│  │   Daily Batch                                                                │   │
-│  │   ┌─────────────────────────────────────┐                                    │   │
-│  │   │ Date: 2026-02-01                    │                                    │   │
-│  │   │ Records: 2,500,000                  │                                    │   │
-│  │   │ Merkle Root: 0x7a8b9c...           │                                    │   │
-│  │   │ Previous Day Hash: 0x4d5e6f...     │                                    │   │
-│  │   └─────────────────────────────────────┘                                    │   │
-│  │                    │                                                         │   │
-│  │                    │ Submit checkpoint                                       │   │
-│  │                    ▼                                                         │   │
-│  │   ┌─────────────────────────────────────┐                                    │   │
-│  │   │     Immutable Ledger Options        │                                    │   │
-│  │   │  ─────────────────────────────────  │                                    │   │
-│  │   │  • Azure Confidential Ledger        │ ← Recommended for enterprise      │   │
-│  │   │  • Azure Immutable Blob (WORM)      │ ← Cost-effective                  │   │
-│  │   │  • Hyperledger (private blockchain) │ ← Maximum trust                   │   │
-│  │   │  • Public blockchain (Ethereum)     │ ← Regulatory requirement          │   │
-│  │   └─────────────────────────────────────┘                                    │   │
-│  │                                                                              │   │
-│  │  Verification Process:                                                       │   │
-│  │  1. Rebuild Merkle tree from audit records                                   │   │
-│  │  2. Compare root hash with blockchain checkpoint                             │   │
-│  │  3. If match → data integrity confirmed                                      │   │
-│  │  4. If mismatch → identify tampered records via Merkle proof                 │   │
-│  │                                                                              │   │
-│  └──────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                      │
-│  Compliance Proof Generation:                                                        │
-│  • "Prove Order #12345 audit trail has not been modified"                          │
-│  • Generate Merkle proof from record to blockchain checkpoint                       │
-│  • Auditor can independently verify against public ledger                           │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Disaster Recovery Plan (灾难恢复计划)
-
-| Scenario | RTO | RPO | Recovery Steps |
-|----------|-----|-----|----------------|
-| **Single AZ failure** | 0 (auto-failover) | 0 | Load balancer routes to healthy AZ |
-| **Database failure** | < 5 min | 0 | Automatic failover to secondary |
-| **Region failure** | < 1 hour | < 5 min | Manual failover to DR region |
-| **Ransomware attack** | < 4 hours | < 1 hour | Restore from immutable backups |
-| **Data corruption** | < 2 hours | Point-in-time | PITR from transaction logs |
-
----
-
-## �📋 Compliance Requirements
-
-### ISO 27001 Mapping
-
-| Control | Requirement | Implementation |
-|---------|-------------|----------------|
-| A.12.4.1 | Event logging | AuditInterceptor captures all changes |
-| A.12.4.2 | Protection of log information | Append-only, role-based access |
-| A.12.4.3 | Admin and operator logs | Separate security audit category |
-| A.12.4.4 | Clock synchronization | All timestamps in UTC |
-
-### GDPR Mapping
-
-| Requirement | Implementation |
-|-------------|----------------|
-| Right to access | Query API returns user's audit trail |
-| Right to erasure | Audit of deletion, not actual deletion |
-| Data minimization | Only necessary fields logged |
-| Purpose limitation | Audit categories enforce purpose |
-| Data retention | Category-based retention policies |
-
-### Report Types
-
-| Report | Content | Format | Schedule |
-|--------|---------|--------|----------|
-| Access Report | Who accessed what data | PDF/Excel | On-demand |
-| Change Report | All modifications in period | PDF/Excel | Weekly |
-| Security Report | Login attempts, permission changes | PDF | Daily |
-| Compliance Summary | Aggregated metrics | PDF | Monthly |
-| Data Export Log | All exports performed | PDF | On-demand |
+- Phone → `138****5678`
+- Email → `u***@example.com`
+- Address → keep city + mask details
 
 ---
 
 ## 🔌 Integration Points
 
-### Upstream Dependencies (Audits)
+### With domain docs
 
-| System | Events Captured | Audit Category |
-|--------|-----------------|----------------|
-| Dynamic Routing (01) | Route calculations, selections | BusinessAction |
-| Multi-Carrier (02) | Carrier bookings, cancellations | BusinessAction, ApiCall |
-| Real-time Tracking (03) | Status changes, location updates | DataChange |
-| Order Processing (04) | All order state changes | DataChange, BusinessAction |
+- 01 routing: log “strategy selected”, constraints used, route result ID
+- 02 multi-carrier: log quote summary + booking result (no raw carrier payloads)
+- 03 tracking: log status changes (for timeline)
+- 04 order processing: log state transitions + refunds/returns
 
-### Downstream Consumers
+### Cross-cutting concerns
 
-| System | Data Consumed | Integration |
-|--------|---------------|-------------|
-| Compliance Dashboard | Aggregated metrics | Query API |
-| SIEM System | Security events | Event stream |
-| Analytics Platform | Business events | Export/Stream |
-| Support Tools | Investigation data | Query API |
-
-### Event Integration
-
-```
-All Domain Events → Audit Service
-
-OrderCreated Event:
-  └─▶ AuditService.LogBusinessAction("OrderCreated", orderId, details)
-
-CarrierBooked Event:
-  └─▶ AuditService.LogBusinessAction("CarrierBooked", shipmentId, carrierDetails)
-  └─▶ AuditService.LogExternalApiCall("SFExpress", "/book", request, response)
-
-TrackingUpdated Event:
-  └─▶ AuditService.LogEntityChange("Shipment", shipmentId, oldStatus, newStatus)
-```
-
----
-
-## � Design Pattern Ledger
-
-### Patterns Used in Audit Domain (本域设计模式登记簿)
-
-| Pattern | Location | Purpose | Study Guide |
-|---------|----------|---------|-------------|
-| **Interceptor Pattern** (拦截器模式) | EF Core SaveChanges | Transparently capture all entity changes | [INTERCEPTOR-PATTERN.md](../design-patterns/INTERCEPTOR-PATTERN.md) |
-| **Decorator Pattern** (装饰器模式) | PII masking, hashing | Layer processing responsibilities | [DECORATOR-PATTERN.md](../design-patterns/DECORATOR-PATTERN.md) |
-| **Strategy Pattern** (策略模式) | Storage selection | Different storage backends per scenario | [STRATEGY-PATTERN.md](../design-patterns/STRATEGY-PATTERN.md) |
-| **Chain of Responsibility** (责任链模式) | PII discovery | Extensible sensitive data detection | Refactoring Guru |
-| **Observer Pattern** (观察者模式) | Event streaming | Notify downstream consumers | [OBSERVER-PATTERN.md](../design-patterns/OBSERVER-PATTERN.md) |
-| **Object Pool** (对象池模式) | AuditEntry reuse | Reduce GC pressure in high-throughput | Microsoft docs |
-| **Producer-Consumer** (生产者-消费者) | Channel queue | Async non-blocking audit writes | .NET docs |
-| **Event Sourcing** (事件溯源) | Audit history | Complete immutable event log | Microsoft docs |
-
-### Pattern Decision Matrix (模式选型决策矩阵)
-
-| Problem | Considered Patterns | Chosen | Reason |
-|---------|---------------------|--------|--------|
-| Capture DB changes | Triggers vs Interceptor | **Interceptor** | Database-agnostic, testable |
-| PII handling | Filter vs Decorator | **Decorator** | Composable, single responsibility |
-| Storage flexibility | Factory vs Strategy | **Strategy** | Runtime selection based on context |
-| High throughput | Sync vs Async | **Channel + Object Pool** | Non-blocking, memory efficient |
-| Data tamper-proof | Signing vs Hash Chain | **Hash Chain + Blockchain** | Industry standard for audit |
-
----
-
-## 🗺️ Implementation Roadmap
-
-### Phase Overview (阶段概览)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    AUDIT SYSTEM IMPLEMENTATION ROADMAP                               │
-│                    审计系统实施路线图                                                 │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║  PHASE 1: CORE FOUNDATION (核心落地)                           4-6 weeks      ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  Deliverables:                                                                ║  │
-│  ║  ✅ AuditInterceptor implementation (synchronous)                             ║  │
-│  ║  ✅ Basic AuditLog table schema                                               ║  │
-│  ║  ✅ IAuditableEntity marker interface                                         ║  │
-│  ║  ✅ User context capture via HttpContext                                      ║  │
-│  ║  ✅ Basic Query API (by entity, date, user)                                   ║  │
-│  ║  ✅ Simple PII masking (attribute-based)                                      ║  │
-│  ║                                                                               ║  │
-│  ║  Success Criteria:                                                            ║  │
-│  ║  • All entity changes logged with <50ms overhead                              ║  │
-│  ║  • Query API returns results in <500ms                                        ║  │
-│  ║  • Basic compliance report generation                                         ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                         │                                           │
-│                                         ▼                                           │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║  PHASE 2: PERFORMANCE & RELIABILITY (增强可靠)                 6-8 weeks      ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  Deliverables:                                                                ║  │
-│  ║  ✅ Async Channel queue for non-blocking writes                               ║  │
-│  ║  ✅ Object pooling for AuditEntry                                             ║  │
-│  ║  ✅ Batch insert optimization                                                 ║  │
-│  ║  ✅ Tiered storage (Hot → Warm archival)                                      ║  │
-│  ║  ✅ Decorator pattern for PII masking chain                                   ║  │
-│  ║  ✅ Basic observability metrics (Prometheus)                                  ║  │
-│  ║  ✅ Retention policy enforcement                                              ║  │
-│  ║                                                                               ║  │
-│  ║  Success Criteria:                                                            ║  │
-│  ║  • Main transaction overhead <5ms (async)                                     ║  │
-│  ║  • Handle 10,000 events/sec sustained                                         ║  │
-│  ║  • Storage costs reduced 60% with tiering                                     ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                         │                                           │
-│                                         ▼                                           │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║  PHASE 3: VALUE EXTRACTION (价值挖掘)                          8-10 weeks     ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  Deliverables:                                                                ║  │
-│  ║  ✅ Event Hub/Kafka integration for streaming                                 ║  │
-│  ║  ✅ Real-time anomaly detection (Stream Analytics)                            ║  │
-│  ║  ✅ SIEM integration (Azure Sentinel)                                         ║  │
-│  ║  ✅ Analytics dashboards (Power BI)                                           ║  │
-│  ║  ✅ Knowledge graph for investigation                                         ║  │
-│  ║  ✅ Elasticsearch integration for complex queries                             ║  │
-│  ║  ✅ Alert rules and automated responses                                       ║  │
-│  ║                                                                               ║  │
-│  ║  Success Criteria:                                                            ║  │
-│  ║  • Anomaly detection within 1 minute of event                                 ║  │
-│  ║  • Investigation time reduced 70%                                             ║  │
-│  ║  • Audit data actively used for business insights                             ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                         │                                           │
-│                                         ▼                                           │
-│  ╔═══════════════════════════════════════════════════════════════════════════════╗  │
-│  ║  PHASE 4: ENTERPRISE HARDENING (企业加固)                      6-8 weeks      ║  │
-│  ╠═══════════════════════════════════════════════════════════════════════════════╣  │
-│  ║                                                                               ║  │
-│  ║  Deliverables:                                                                ║  │
-│  ║  ✅ Hash chain implementation for tamper-proofing                             ║  │
-│  ║  ✅ Blockchain/immutable ledger integration                                   ║  │
-│  ║  ✅ Multi-region deployment with DR                                           ║  │
-│  ║  ✅ GDPR right-to-erasure automation                                          ║  │
-│  ║  ✅ Cold storage (Azure Archive/Glacier)                                      ║  │
-│  ║  ✅ Compliance certification preparation (ISO 27001)                          ║  │
-│  ║  ✅ Penetration testing and security audit                                    ║  │
-│  ║                                                                               ║  │
-│  ║  Success Criteria:                                                            ║  │
-│  ║  • Data integrity cryptographically provable                                  ║  │
-│  ║  • RTO < 1 hour for regional failover                                         ║  │
-│  ║  • Pass ISO 27001 audit                                                       ║  │
-│  ║  • GDPR erasure requests processed in <72 hours                               ║  │
-│  ║                                                                               ║  │
-│  ╚═══════════════════════════════════════════════════════════════════════════════╝  │
-│                                                                                      │
-│  Total Timeline: 24-32 weeks                                                        │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Phase Dependencies (阶段依赖)
-
-```
-           Phase 1                    Phase 2                    Phase 3                    Phase 4
-    ┌────────────────────┐     ┌────────────────────┐     ┌────────────────────┐     ┌────────────────────┐
-    │ Core Foundation    │────▶│ Performance        │────▶│ Value Extraction   │────▶│ Enterprise         │
-    │                    │     │                    │     │                    │     │ Hardening          │
-    │ • Interceptor      │     │ • Async queue      │     │ • Event streaming  │     │ • Hash chain       │
-    │ • Basic storage    │     │ • Tiered storage   │     │ • Anomaly detect   │     │ • Blockchain       │
-    │ • Query API        │     │ • Observability    │     │ • Analytics        │     │ • Multi-region     │
-    └────────────────────┘     └────────────────────┘     └────────────────────┘     └────────────────────┘
-           │                          │                          │                          │
-           │                          │                          │                          │
-           ▼                          ▼                          ▼                          ▼
-    Meets basic compliance     Production-ready           Data-driven insights      Audit certification
-    requirements               performance                enabled                   ready
-```
-
----
-
-## �📚 Study Resources
-
-### Chinese Tech Community References
-
-| Source | Search Keywords | Focus |
-|--------|-----------------|-------|
-| CSDN | `物流操作日志 审计 EF Core` | EF Core audit implementation |
-| CSDN | `ISO 27001 审计日志` | Compliance logging |
-| CSDN | `EF Core拦截器 审计` | Interceptor pattern |
-| CSDN | `顺丰物流审计实现` | Industry reference |
-| 博客园 | `操作日志 最佳实践` | Best practices |
-
-### EF Core References
-
-| Resource | Content |
-|----------|---------|
-| Microsoft Docs | EF Core Interceptors |
-| EF Core GitHub | SaveChangesInterceptor samples |
-| ABP Framework | Audit logging module |
-
-### Compliance References
-
-| Resource | Content |
-|----------|---------|
-| ISO 27001 | Information security standard |
-| GDPR Guidelines | Data protection requirements |
-| 网络安全法 | China cybersecurity law |
+- Correlation ID propagation: request → commands → audit records
+- Policy enforcement: masking + retention classification
 
 ---
 
 ## ✅ Acceptance Criteria
 
-### Functional Acceptance
+### Functional
 
-| ID | Criteria | Test Method |
-|----|----------|-------------|
-| AC-AU-001 | Entity create is logged automatically | Integration test |
-| AC-AU-002 | Entity update captures old/new values | Unit test |
-| AC-AU-003 | Entity delete is logged | Integration test |
-| AC-AU-004 | User context is captured correctly | Unit test |
-| AC-AU-005 | Correlation ID links related changes | Integration test |
-| AC-AU-006 | PII is masked in logs | Unit test |
-| AC-AU-007 | Can query logs by entity | API test |
-| AC-AU-008 | Can query logs by date range | API test |
-| AC-AU-009 | Can generate compliance report | Integration test |
-| AC-AU-010 | Retention policy deletes old logs | Scheduled test |
+- Entity create/update/delete produces an audit record automatically (interceptor capture).
+- Records include actor + timestamp + correlation ID.
+- PII masking policy is applied consistently (if masking decorator is enabled).
+- Timeline query returns events in chronological order for:
+  - a specific order (entityType+entityId)
+  - a request correlation ID
 
-### Non-Functional Acceptance
+### Non-functional (learning edition targets)
 
-| ID | Criteria | Target | Test Method |
-|----|----------|--------|-------------|
-| NFR-AU-001 | Audit write latency | < 50ms | Performance |
-| NFR-AU-002 | Audit query latency | < 500ms | Performance |
-| NFR-AU-003 | Audit storage overhead | < 20% of data | Monitoring |
-| NFR-AU-004 | Audit availability | 99.9% | Monitoring |
-| NFR-AU-005 | Report generation time | < 30s | Performance |
+- Audit capture does not require changing business logic in 01–04.
+- Audit writing is replaceable via `IAuditSink`.
+- Query operations are read-only.
+
+### Testing Checklist
+
+- Unit: masking policy transforms phone/email/address fields.
+- Unit: enrichment fills actor/correlation/timestamp.
+- Integration: Save interceptor captures modified entity fields (before/after).
+- Integration: timeline query returns ordered results for an order ID.
+
+---
+
+## 🗂 Project Structure
+
+- `src/AuditTracking.Core/`
+  - models, policies, contracts (IAuditSink, IAuditQueryService)
+- `src/AuditTracking.Capture/`
+  - interceptors / hooks (EF save, request pipeline, domain action hook)
+- `src/AuditTracking.Infrastructure/`
+  - sink implementations (e.g., SQL / in-memory), masking decorator
+- `src/AuditTracking.Demo/`
+  - scenarios + output (timeline by correlation ID)
+
+---
+
+## 🧠 Interview Guide
+
+- Why Interceptor instead of adding logging into every command handler?
+- What makes an audit record “trustworthy” (immutability, correlation, actor)?
+- Where do you apply PII masking, and why a decorator is a good fit?
+- What’s the difference between an “audit stream” and full event sourcing?
+- How do you keep audit useful without logging everything?
+
+---
+
+## 📚 Study Resources
+
+- Patterns:
+  - [../design-patterns/INTERCEPTOR-PATTERN.md](../design-patterns/INTERCEPTOR-PATTERN.md)
+  - [../design-patterns/DECORATOR-PATTERN.md](../design-patterns/DECORATOR-PATTERN.md)
+- Data models:
+  - [../data-models/ORDER-AGGREGATE.md](../data-models/ORDER-AGGREGATE.md)
+  - [../data-models/VALUE-OBJECTS.md](../data-models/VALUE-OBJECTS.md)
 
 ---
 
 ## 🔗 Related Documents
 
-- **Audits**: [01-DYNAMIC-ROUTING.md](01-DYNAMIC-ROUTING.md) - Route decisions
-- **Audits**: [02-MULTI-CARRIER.md](02-MULTI-CARRIER.md) - Carrier interactions
-- **Audits**: [03-REALTIME-TRACKING.md](03-REALTIME-TRACKING.md) - Status changes
-- **Audits**: [04-ORDER-PROCESSING.md](04-ORDER-PROCESSING.md) - Order lifecycle
-- **Pattern Guide**: [INTERCEPTOR-PATTERN.md](../design-patterns/INTERCEPTOR-PATTERN.md) - Primary pattern
-- **Pattern Guide**: [DECORATOR-PATTERN.md](../design-patterns/DECORATOR-PATTERN.md) - PII masking
-- **Index**: [00-INDEX.md](../00-INDEX.md)
-
----
-*Enhanced: Observability, pattern integration, lifecycle management, data pipelines, resilience architecture, implementation roadmap*
+- System:
+  - [../00-INDEX.md](../00-INDEX.md)
+  - [../01-SYSTEM-VISION.md](../01-SYSTEM-VISION.md)
+- Core domains:
+  - [01-DYNAMIC-ROUTING.md](01-DYNAMIC-ROUTING.md)
+  - [02-MULTI-CARRIER.md](02-MULTI-CARRIER.md)
+  - [03-REALTIME-TRACKING.md](03-REALTIME-TRACKING.md)
+  - [04-ORDER-PROCESSING.md](04-ORDER-PROCESSING.md)
