@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DtExpress.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ef459310da0b3cbcfb441548a756ff844405e2f6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+927aa2b5bbac7fbcc2cd0247fbcf5abb0e1e7e55")]
 [assembly: System.Reflection.AssemblyProductAttribute("DtExpress.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DtExpress.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
