@@ -1,0 +1,6 @@
+@DtExpress.Api_HostAddress = http://localhost:5198
+
+GET {{DtExpress.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

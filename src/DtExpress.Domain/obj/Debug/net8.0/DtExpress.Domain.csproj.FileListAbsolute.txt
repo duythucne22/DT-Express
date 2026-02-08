@@ -1,0 +1,12 @@
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\bin\Debug\net8.0\DtExpress.Domain.deps.json
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\bin\Debug\net8.0\DtExpress.Domain.dll
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\bin\Debug\net8.0\DtExpress.Domain.pdb
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.AssemblyInfoInputs.cache
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.AssemblyInfo.cs
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.csproj.CoreCompileInputs.cache
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.sourcelink.json
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.dll
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\refint\DtExpress.Domain.dll
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\DtExpress.Domain.pdb
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Domain\obj\Debug\net8.0\ref\DtExpress.Domain.dll

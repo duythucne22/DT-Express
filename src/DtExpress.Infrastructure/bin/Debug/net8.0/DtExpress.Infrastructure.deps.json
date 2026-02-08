@@ -1,0 +1,56 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "DtExpress.Infrastructure/1.0.0": {
+        "dependencies": {
+          "DtExpress.Application": "1.0.0",
+          "DtExpress.Domain": "1.0.0"
+        },
+        "runtime": {
+          "DtExpress.Infrastructure.dll": {}
+        }
+      },
+      "DtExpress.Application/1.0.0": {
+        "dependencies": {
+          "DtExpress.Domain": "1.0.0"
+        },
+        "runtime": {
+          "DtExpress.Application.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "DtExpress.Domain/1.0.0": {
+        "runtime": {
+          "DtExpress.Domain.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "DtExpress.Infrastructure/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "DtExpress.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "DtExpress.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
