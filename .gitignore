@@ -25,3 +25,12 @@ logs/
 # Misc
 dist/
 build/
+
+.vs/
+**/bin/
+**/obj/
+TestResults/
+*.user
+*.suo
+packages/
+*.nupkg
