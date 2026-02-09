@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DtExpress.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+238c197033eda91e97e5ab4a024d6b6c2c92e476")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+246ed3b1370add6fcf763edf9acee42ef07c4949")]
 [assembly: System.Reflection.AssemblyProductAttribute("DtExpress.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DtExpress.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
