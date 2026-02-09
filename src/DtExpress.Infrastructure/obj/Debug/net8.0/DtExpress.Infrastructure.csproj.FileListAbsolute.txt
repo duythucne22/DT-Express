@@ -1,3 +1,9 @@
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.AssemblyInfo.cs
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.sourcelink.json
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\DtExpress.Infrastructure.deps.json
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\DtExpress.Infrastructure.dll
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\DtExpress.Infrastructure.pdb
@@ -5,12 +11,6 @@ C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\DtExpress.Domain.dll
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\DtExpress.Application.pdb
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\bin\Debug\net8.0\DtExpress.Domain.pdb
-C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.csproj.AssemblyReference.cache
-C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.AssemblyInfoInputs.cache
-C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.AssemblyInfo.cs
-C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.csproj.CoreCompileInputs.cache
-C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.sourcelink.json
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpres.93E34238.Up2Date
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\DtExpress.Infrastructure.dll
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Infrastructure\obj\Debug\net8.0\refint\DtExpress.Infrastructure.dll
