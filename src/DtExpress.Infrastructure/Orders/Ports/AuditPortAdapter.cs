@@ -3,7 +3,7 @@ using DtExpress.Domain.Audit.Interfaces;
 using DtExpress.Domain.Audit.Models;
 using DtExpress.Domain.Common;
 
-namespace DtExpress.Infrastructure.Audit.Ports;
+namespace DtExpress.Infrastructure.Orders.Ports;
 
 /// <summary>
 /// Port Adapter: bridges <see cref="IAuditPort"/> (Application layer) to
