@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DtExpress.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+246ed3b1370add6fcf763edf9acee42ef07c4949")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1994348810f6eef3abf1c7004e7cc65188df87d9")]
 [assembly: System.Reflection.AssemblyProductAttribute("DtExpress.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DtExpress.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

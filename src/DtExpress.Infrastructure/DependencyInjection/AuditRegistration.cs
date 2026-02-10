@@ -33,7 +33,7 @@ internal static class AuditRegistration
             sp.GetRequiredService<InMemoryAuditSink>());
 
         // === Interceptor ===
-        services.AddSingleton<IAuditInterceptor, DomainEventAuditInterceptor>();
+        services.AddScoped<IAuditInterceptor, DomainEventAuditInterceptor>();
 
         // === Cross-domain port ===
         services.AddScoped<IAuditPort, AuditPortAdapter>();

@@ -37,3 +37,7 @@ C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\obj\Debug\net8.0\refint\DtEx
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\obj\Debug\net8.0\DtExpress.Api.pdb
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\obj\Debug\net8.0\DtExpress.Api.genruntimeconfig.cache
 C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\obj\Debug\net8.0\ref\DtExpress.Api.dll
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\bin\Debug\net8.0\DtExpress.Api.xml
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\duyth\Desktop\DT-Express\src\DtExpress.Api\obj\Debug\net8.0\DtExpress.Api.xml

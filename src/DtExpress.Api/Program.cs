@@ -1,34 +1,59 @@
+using DtExpress.Api.Filters;
+using DtExpress.Api.Middleware;
+using DtExpress.Infrastructure.DependencyInjection;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// === Service Registration (single entry point — all 5 domains) ===
+builder.Services.AddDtExpress();
+
+// === API Setup ===
+builder.Services.AddControllers(options =>
+{
+    // Global exception filter — maps DomainException → HTTP status codes
+    options.Filters.Add<GlobalExceptionFilter>();
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "DT-Express TMS API",
+        Version = "v1",
+        Description = "Transport Management System — Dynamic Routing, Multi-Carrier, Real-time Tracking, Order Processing, Audit Trail"
+    });
+
+    // Group endpoints by controller tag
+    options.TagActionsBy(api =>
+        new[] { api.GroupName ?? api.ActionDescriptor.RouteValues["controller"]! });
+
+    // Include XML documentation for Swagger UI
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath);
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// === Middleware Pipeline ===
+
+// Correlation ID — reads/generates X-Correlation-ID header for request tracing
+app.UseMiddleware<CorrelationIdMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "DT-Express TMS API v1");
+        options.DocumentTitle = "DT-Express API Documentation";
+    });
+}
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-});
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
