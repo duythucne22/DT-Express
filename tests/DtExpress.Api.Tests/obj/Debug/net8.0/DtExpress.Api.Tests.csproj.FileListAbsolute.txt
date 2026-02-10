@@ -442,3 +442,4 @@ C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\obj\Debug\net8.0\ref
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\obj\Debug\net8.0\DtExpress.Api.Tests.pdb
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\obj\Debug\net8.0\DtExpress.Api.Tests.genruntimeconfig.cache
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\obj\Debug\net8.0\ref\DtExpress.Api.Tests.dll
+C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\DtExpress.Api.xml

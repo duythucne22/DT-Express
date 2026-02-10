@@ -105,3 +105,5 @@ C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Infrastructure.Tests\obj\Debug
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Infrastructure.Tests\obj\Debug\net8.0\DtExpress.Infrastructure.Tests.pdb
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Infrastructure.Tests\obj\Debug\net8.0\DtExpress.Infrastructure.Tests.genruntimeconfig.cache
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Infrastructure.Tests\obj\Debug\net8.0\ref\DtExpress.Infrastructure.Tests.dll
+C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Infrastructure.Tests\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Infrastructure.Tests\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll

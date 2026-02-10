@@ -314,7 +314,7 @@
           "System.Text.Encoding.Reference": "8.0.0.0",
           "System.Text.Encoding.Extensions.Reference": "8.0.0.0",
           "System.Text.Encodings.Web": "8.0.0.0",
-          "System.Text.Json.Reference": "8.0.0.0",
+          "System.Text.Json": "8.0.0.0",
           "System.Text.RegularExpressions.Reference": "8.0.0.0",
           "System.Threading.Channels": "8.0.0.0",
           "System.Threading.Reference": "8.0.0.0",
@@ -393,7 +393,7 @@
           "lib/netcoreapp3.1/Microsoft.VisualStudio.CodeCoverage.Shim.dll": {}
         }
       },
-      "Microsoft.Extensions.ApiDescription.Server/8.0.0": {},
+      "Microsoft.Extensions.ApiDescription.Server/6.0.5": {},
       "Microsoft.Extensions.Configuration/8.0.0": {
         "dependencies": {
           "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
@@ -716,18 +716,15 @@
       },
       "Microsoft.NETCore.Platforms/1.1.0": {},
       "Microsoft.NETCore.Targets/1.1.0": {},
-      "Microsoft.OpenApi/2.4.1": {
-        "dependencies": {
-          "System.Text.Json": "8.0.5"
-        },
+      "Microsoft.OpenApi/1.6.14": {
         "runtime": {
-          "lib/net8.0/Microsoft.OpenApi.dll": {
-            "assemblyVersion": "2.4.1.0",
-            "fileVersion": "2.4.1.0"
+          "lib/netstandard2.0/Microsoft.OpenApi.dll": {
+            "assemblyVersion": "1.6.14.0",
+            "fileVersion": "1.6.14.0"
           }
         },
         "compile": {
-          "lib/net8.0/Microsoft.OpenApi.dll": {}
+          "lib/netstandard2.0/Microsoft.OpenApi.dll": {}
         }
       },
       "Microsoft.TestPlatform.ObjectModel/17.8.0": {
@@ -1117,47 +1114,47 @@
       "runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.0": {},
       "runtime.ubuntu.16.04-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.0": {},
       "runtime.ubuntu.16.10-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.0": {},
-      "Swashbuckle.AspNetCore/10.1.2": {
+      "Swashbuckle.AspNetCore/6.9.0": {
         "dependencies": {
-          "Microsoft.Extensions.ApiDescription.Server": "8.0.0",
-          "Swashbuckle.AspNetCore.Swagger": "10.1.2",
-          "Swashbuckle.AspNetCore.SwaggerGen": "10.1.2",
-          "Swashbuckle.AspNetCore.SwaggerUI": "10.1.2"
+          "Microsoft.Extensions.ApiDescription.Server": "6.0.5",
+          "Swashbuckle.AspNetCore.Swagger": "6.9.0",
+          "Swashbuckle.AspNetCore.SwaggerGen": "6.9.0",
+          "Swashbuckle.AspNetCore.SwaggerUI": "6.9.0"
         }
       },
-      "Swashbuckle.AspNetCore.Swagger/10.1.2": {
+      "Swashbuckle.AspNetCore.Swagger/6.9.0": {
         "dependencies": {
-          "Microsoft.OpenApi": "2.4.1"
+          "Microsoft.OpenApi": "1.6.14"
         },
         "runtime": {
           "lib/net8.0/Swashbuckle.AspNetCore.Swagger.dll": {
-            "assemblyVersion": "10.1.2.0",
-            "fileVersion": "10.1.2.2188"
+            "assemblyVersion": "6.9.0.0",
+            "fileVersion": "6.9.0.799"
           }
         },
         "compile": {
           "lib/net8.0/Swashbuckle.AspNetCore.Swagger.dll": {}
         }
       },
-      "Swashbuckle.AspNetCore.SwaggerGen/10.1.2": {
+      "Swashbuckle.AspNetCore.SwaggerGen/6.9.0": {
         "dependencies": {
-          "Swashbuckle.AspNetCore.Swagger": "10.1.2"
+          "Swashbuckle.AspNetCore.Swagger": "6.9.0"
         },
         "runtime": {
           "lib/net8.0/Swashbuckle.AspNetCore.SwaggerGen.dll": {
-            "assemblyVersion": "10.1.2.0",
-            "fileVersion": "10.1.2.2188"
+            "assemblyVersion": "6.9.0.0",
+            "fileVersion": "6.9.0.799"
           }
         },
         "compile": {
           "lib/net8.0/Swashbuckle.AspNetCore.SwaggerGen.dll": {}
         }
       },
-      "Swashbuckle.AspNetCore.SwaggerUI/10.1.2": {
+      "Swashbuckle.AspNetCore.SwaggerUI/6.9.0": {
         "runtime": {
           "lib/net8.0/Swashbuckle.AspNetCore.SwaggerUI.dll": {
-            "assemblyVersion": "10.1.2.0",
-            "fileVersion": "10.1.2.2188"
+            "assemblyVersion": "6.9.0.0",
+            "fileVersion": "6.9.0.799"
           }
         },
         "compile": {
@@ -1676,7 +1673,6 @@
           "System.Text.Encoding": "4.3.0"
         }
       },
-      "System.Text.Json/8.0.5": {},
       "System.Text.RegularExpressions/4.3.0": {
         "dependencies": {
           "System.Runtime": "4.3.0"
@@ -1817,7 +1813,7 @@
       "DtExpress.Api/1.0.0": {
         "dependencies": {
           "DtExpress.Infrastructure": "1.0.0",
-          "Swashbuckle.AspNetCore": "10.1.2"
+          "Swashbuckle.AspNetCore": "6.9.0"
         },
         "runtime": {
           "DtExpress.Api.dll": {
@@ -1857,7 +1853,9 @@
       "DtExpress.Infrastructure/1.0.0": {
         "dependencies": {
           "DtExpress.Application": "1.0.0",
-          "DtExpress.Domain": "1.0.0"
+          "DtExpress.Domain": "1.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.2"
         },
         "runtime": {
           "DtExpress.Infrastructure.dll": {
@@ -3501,7 +3499,7 @@
         },
         "compileOnly": true
       },
-      "System.Text.Json.Reference/8.0.0.0": {
+      "System.Text.Json/8.0.0.0": {
         "compile": {
           "System.Text.Json.dll": {}
         },
@@ -3711,12 +3709,12 @@
       "path": "microsoft.codecoverage/17.8.0",
       "hashPath": "microsoft.codecoverage.17.8.0.nupkg.sha512"
     },
-    "Microsoft.Extensions.ApiDescription.Server/8.0.0": {
+    "Microsoft.Extensions.ApiDescription.Server/6.0.5": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-jDM3a95WerM8g6IcMiBXq1qRS9dqmEUpgnCk2DeMWpPkYtp1ia+CkXabOnK93JmhVlUmv8l9WMPsCSUm+WqkIA==",
-      "path": "microsoft.extensions.apidescription.server/8.0.0",
-      "hashPath": "microsoft.extensions.apidescription.server.8.0.0.nupkg.sha512"
+      "sha512": "sha512-Ckb5EDBUNJdFWyajfXzUIMRkhf52fHZOQuuZg/oiu8y7zDCVwD0iHhew6MnThjHmevanpxL3f5ci2TtHQEN6bw==",
+      "path": "microsoft.extensions.apidescription.server/6.0.5",
+      "hashPath": "microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512"
     },
     "Microsoft.Extensions.Configuration/8.0.0": {
       "type": "package",
@@ -3935,12 +3933,12 @@
       "path": "microsoft.netcore.targets/1.1.0",
       "hashPath": "microsoft.netcore.targets.1.1.0.nupkg.sha512"
     },
-    "Microsoft.OpenApi/2.4.1": {
+    "Microsoft.OpenApi/1.6.14": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-u7QhXCISMQuab3flasb1hoaiERmUqyWsW7tmQODyILoQ7mJV5IRGM+2KKZYo0QUfC13evEOcHAb6TPWgqEQtrw==",
-      "path": "microsoft.openapi/2.4.1",
-      "hashPath": "microsoft.openapi.2.4.1.nupkg.sha512"
+      "sha512": "sha512-tTaBT8qjk3xINfESyOPE2rIellPvB7qpVqiWiyA/lACVvz+xOGiXhFUfohcx82NLbi5avzLW0lx+s6oAqQijfw==",
+      "path": "microsoft.openapi/1.6.14",
+      "hashPath": "microsoft.openapi.1.6.14.nupkg.sha512"
     },
     "Microsoft.TestPlatform.ObjectModel/17.8.0": {
       "type": "package",
@@ -4096,33 +4094,33 @@
       "path": "runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl/4.3.0",
       "hashPath": "runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl.4.3.0.nupkg.sha512"
     },
-    "Swashbuckle.AspNetCore/10.1.2": {
+    "Swashbuckle.AspNetCore/6.9.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-txDJi7w/didFl/kIlTaA+FfzaJvZaXXZMejfxhJRK/CZdG8PrJcW1xquUuyLN0zNTpU5K0mm0U19B0/P5xiNOA==",
-      "path": "swashbuckle.aspnetcore/10.1.2",
-      "hashPath": "swashbuckle.aspnetcore.10.1.2.nupkg.sha512"
+      "sha512": "sha512-lvI+XHF21tkwXd2nDCLGJsdhdUYsY3Ax2fWUlvw81Oa6EedtnIAf5tThy8ZnPcz/9/TwsLgjgtX9ifOCIjbEPA==",
+      "path": "swashbuckle.aspnetcore/6.9.0",
+      "hashPath": "swashbuckle.aspnetcore.6.9.0.nupkg.sha512"
     },
-    "Swashbuckle.AspNetCore.Swagger/10.1.2": {
+    "Swashbuckle.AspNetCore.Swagger/6.9.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-CvIeWbEJ+pogj601pptQYzz3poZhS8/mk/vFozRQ74JckT3WWLGX1mFjNwNVdJOERf4Lk/clbFqfRG4WEvDGcw==",
-      "path": "swashbuckle.aspnetcore.swagger/10.1.2",
-      "hashPath": "swashbuckle.aspnetcore.swagger.10.1.2.nupkg.sha512"
+      "sha512": "sha512-P316kpxx5DnDvJwNWW8iTAXkh9DVenAxFGe9v4OUS0gil+vitH7F1feXhCtVeHN/616EFNTMh4pV2lcr9kkw/w==",
+      "path": "swashbuckle.aspnetcore.swagger/6.9.0",
+      "hashPath": "swashbuckle.aspnetcore.swagger.6.9.0.nupkg.sha512"
     },
-    "Swashbuckle.AspNetCore.SwaggerGen/10.1.2": {
+    "Swashbuckle.AspNetCore.SwaggerGen/6.9.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-/gcOooF1cfmdvYU6wFiPB9On5CMUp2P/jrt2EFEoSG0p0xSALBdWoWy3eNHVmzXUlVHaGAg5PHFC6e8C+tVpWw==",
-      "path": "swashbuckle.aspnetcore.swaggergen/10.1.2",
-      "hashPath": "swashbuckle.aspnetcore.swaggergen.10.1.2.nupkg.sha512"
+      "sha512": "sha512-FjeMR3fBzwVc5plfYjoHw9ptf8SOWMupvO9X35J5EgzT3L9dRqSxa+cBKzL8PwCyemY0xNrggQSB5+MFWx1axg==",
+      "path": "swashbuckle.aspnetcore.swaggergen/6.9.0",
+      "hashPath": "swashbuckle.aspnetcore.swaggergen.6.9.0.nupkg.sha512"
     },
-    "Swashbuckle.AspNetCore.SwaggerUI/10.1.2": {
+    "Swashbuckle.AspNetCore.SwaggerUI/6.9.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Zzam+F/g3jpGvSLhqdtOoBe+GEABk+oi9LJxun1wrz52/254sSGWkz1P+U1dDifsXJWVdZusiRuDWLXkJW+7Eg==",
-      "path": "swashbuckle.aspnetcore.swaggerui/10.1.2",
-      "hashPath": "swashbuckle.aspnetcore.swaggerui.10.1.2.nupkg.sha512"
+      "sha512": "sha512-0OxlWBFLl2gUESZX/K7QCTz9KctKy0VxHTvLIBcyWGD4z/fv5MCMW02qzYGcReLJr4yBnNDRzApKtLh6oBpe9A==",
+      "path": "swashbuckle.aspnetcore.swaggerui/6.9.0",
+      "hashPath": "swashbuckle.aspnetcore.swaggerui.6.9.0.nupkg.sha512"
     },
     "System.AppContext/4.3.0": {
       "type": "package",
@@ -4466,13 +4464,6 @@
       "sha512": "sha512-YVMK0Bt/A43RmwizJoZ22ei2nmrhobgeiYwFzC4YAN+nue8RF6djXDMog0UCn+brerQoYVyaS+ghy9P/MUVcmw==",
       "path": "system.text.encoding.extensions/4.3.0",
       "hashPath": "system.text.encoding.extensions.4.3.0.nupkg.sha512"
-    },
-    "System.Text.Json/8.0.5": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-0f1B50Ss7rqxXiaBJyzUu9bWFOO2/zSlifZ/UNMdiIpDYe4cY4LQQicP4nirK1OS31I43rn062UIJ1Q9bpmHpg==",
-      "path": "system.text.json/8.0.5",
-      "hashPath": "system.text.json.8.0.5.nupkg.sha512"
     },
     "System.Text.RegularExpressions/4.3.0": {
       "type": "package",
@@ -5959,7 +5950,7 @@
       "serviceable": false,
       "sha512": ""
     },
-    "System.Text.Json.Reference/8.0.0.0": {
+    "System.Text.Json/8.0.0.0": {
       "type": "referenceassembly",
       "serviceable": false,
       "sha512": ""
