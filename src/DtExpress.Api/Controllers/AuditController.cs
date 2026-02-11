@@ -2,6 +2,7 @@ using DtExpress.Api.Models;
 using DtExpress.Api.Models.Audit;
 using DtExpress.Domain.Audit.Interfaces;
 using DtExpress.Domain.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DtExpress.Api.Controllers;
@@ -14,6 +15,7 @@ namespace DtExpress.Api.Controllers;
 [Route("api/audit")]
 [Produces("application/json")]
 [Tags("Audit")]
+[Authorize(Roles = "Admin,Dispatcher")]
 public sealed class AuditController : ControllerBase
 {
     private readonly IAuditQueryService _auditQuery;

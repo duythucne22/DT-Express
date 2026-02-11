@@ -8,6 +8,7 @@ using DtExpress.Domain.Common;
 using DtExpress.Domain.Orders.Models;
 using DtExpress.Domain.Routing.Enums;
 using DtExpress.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DtExpress.Api.Controllers;
@@ -21,6 +22,7 @@ namespace DtExpress.Api.Controllers;
 [Route("api/orders")]
 [Produces("application/json")]
 [Tags("Orders")]
+[Authorize]
 public sealed class OrdersController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
@@ -46,6 +48,7 @@ public sealed class OrdersController : ControllerBase
     /// <response code="201">Order created successfully.</response>
     /// <response code="400">Invalid request data (validation error).</response>
     [HttpPost]
+    [Authorize(Roles = "Admin,Dispatcher")]
     [ProducesResponseType(typeof(ApiResponse<CreateOrderResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
@@ -149,6 +152,7 @@ public sealed class OrdersController : ControllerBase
     /// <response code="400">Invalid state transition.</response>
     /// <response code="404">Order not found.</response>
     [HttpPut("{id:guid}/confirm")]
+    [Authorize(Roles = "Admin,Dispatcher")]
     [ProducesResponseType(typeof(ApiResponse<OrderTransitionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -176,6 +180,7 @@ public sealed class OrdersController : ControllerBase
     /// <response code="400">Invalid state transition or routing/booking failure.</response>
     /// <response code="404">Order not found.</response>
     [HttpPut("{id:guid}/ship")]
+    [Authorize(Roles = "Admin,Dispatcher")]
     [ProducesResponseType(typeof(ApiResponse<OrderTransitionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -205,6 +210,7 @@ public sealed class OrdersController : ControllerBase
     /// <response code="400">Invalid state transition.</response>
     /// <response code="404">Order not found.</response>
     [HttpPut("{id:guid}/deliver")]
+    [Authorize(Roles = "Admin,Driver")]
     [ProducesResponseType(typeof(ApiResponse<OrderTransitionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -230,6 +236,7 @@ public sealed class OrdersController : ControllerBase
     /// <response code="400">Invalid state transition (e.g. cannot cancel shipped/delivered order).</response>
     /// <response code="404">Order not found.</response>
     [HttpPut("{id:guid}/cancel")]
+    [Authorize(Roles = "Admin,Dispatcher")]
     [ProducesResponseType(typeof(ApiResponse<OrderTransitionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]

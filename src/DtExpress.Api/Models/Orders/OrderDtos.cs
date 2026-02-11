@@ -18,14 +18,14 @@ public sealed record OrderAddressDto
 
 /// <summary>Weight for order items.</summary>
 public sealed record OrderWeightDto(
-    [property: Required, Range(0.01, double.MaxValue)] decimal Value,
-    [property: Required] string Unit);
+    [Required, Range(0.01, double.MaxValue)] decimal Value,
+    [Required] string Unit);
 
 /// <summary>Dimension for order items (optional).</summary>
 public sealed record OrderDimensionDto(
-    [property: Required, Range(0.01, double.MaxValue)] decimal LengthCm,
-    [property: Required, Range(0.01, double.MaxValue)] decimal WidthCm,
-    [property: Required, Range(0.01, double.MaxValue)] decimal HeightCm);
+    [Required, Range(0.01, double.MaxValue)] decimal LengthCm,
+    [Required, Range(0.01, double.MaxValue)] decimal WidthCm,
+    [Required, Range(0.01, double.MaxValue)] decimal HeightCm);
 
 /// <summary>Line item within an order.</summary>
 public sealed record OrderItemDto

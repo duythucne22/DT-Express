@@ -3,9 +3,7 @@ using DtExpress.Application.Orders.Commands;
 using DtExpress.Application.Orders.Handlers;
 using DtExpress.Application.Orders.Queries;
 using DtExpress.Domain.Carrier.Models;
-using DtExpress.Domain.Orders.Interfaces;
 using DtExpress.Domain.Orders.Models;
-using DtExpress.Infrastructure.Orders;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DtExpress.Infrastructure.DependencyInjection;
@@ -25,9 +23,10 @@ internal static class OrderRegistration
         // States are NOT registered in DI. They are created by the Order aggregate or
         // by the repository when loading. States are pure logic, no dependencies.
 
-        // === Repositories (singleton — in-memory store) ===
-        services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
-        services.AddSingleton<IOrderReadService, InMemoryOrderReadService>();
+        // === Repositories ===
+        // IOrderRepository and IOrderReadService are registered by AddDtExpressData()
+        // in the Infrastructure.Data project (EF Core PostgreSQL implementation).
+        // The in-memory implementations remain available for testing.
 
         // === CQRS Command Handlers ===
         services.AddScoped<ICommandHandler<CreateOrderCommand, Guid>, CreateOrderHandler>();

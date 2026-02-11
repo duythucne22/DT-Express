@@ -22,19 +22,22 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Gui
     private readonly IAuditPort _audit;
     private readonly IClock _clock;
     private readonly IIdGenerator _idGenerator;
+    private readonly Func<OrderStatus, IOrderState> _stateFactory;
 
     public CreateOrderHandler(
         IOrderRepository repository,
         IDomainEventPublisher eventPublisher,
         IAuditPort audit,
         IClock clock,
-        IIdGenerator idGenerator)
+        IIdGenerator idGenerator,
+        Func<OrderStatus, IOrderState> stateFactory)
     {
         _repository = repository;
         _eventPublisher = eventPublisher;
         _audit = audit;
         _clock = clock;
         _idGenerator = idGenerator;
+        _stateFactory = stateFactory;
     }
 
     public async Task<Guid> HandleAsync(CreateOrderCommand command, CancellationToken ct = default)
@@ -51,9 +54,7 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Gui
 
         var customer = new ContactInfo(command.CustomerName, command.CustomerPhone, command.CustomerEmail);
 
-        // Create aggregate with initial Created state (state is set by infrastructure)
-        // The IOrderState initial state will be provided by the Order constructor
-        // For now, we pass null and let the infrastructure provide CreatedState
+        // Create aggregate with initial Created state
         var order = new Order(
             id: orderId,
             orderNumber: orderNumber,
@@ -62,7 +63,7 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Gui
             destination: command.Destination,
             items: command.Items,
             serviceLevel: command.ServiceLevel,
-            initialState: null!, // Will be set by infrastructure's CreatedState — handler doesn't know concrete states
+            initialState: _stateFactory(OrderStatus.Created),
             createdAt: now);
 
         // Persist

@@ -5,6 +5,7 @@ using DtExpress.Domain.Carrier.Interfaces;
 using DtExpress.Domain.Common;
 using DtExpress.Domain.Routing.Enums;
 using DtExpress.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DtExpress.Api.Controllers;
@@ -17,6 +18,7 @@ namespace DtExpress.Api.Controllers;
 [Route("api/carriers")]
 [Produces("application/json")]
 [Tags("Carriers")]
+[Authorize]
 public sealed class CarrierController : ControllerBase
 {
     private readonly CarrierQuotingService _quotingService;
@@ -40,6 +42,7 @@ public sealed class CarrierController : ControllerBase
     /// <remarks>Returns carrier codes and display names for SF Express (顺丰) and JD Logistics (京东).</remarks>
     /// <response code="200">List of registered carriers.</response>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<CarrierInfoResponse>>), StatusCodes.Status200OK)]
     public IActionResult GetCarriers()
     {
@@ -102,6 +105,7 @@ public sealed class CarrierController : ControllerBase
     /// <response code="400">Invalid request data.</response>
     /// <response code="404">Carrier code not found.</response>
     [HttpPost("{code}/book")]
+    [Authorize(Roles = "Admin,Dispatcher")]
     [ProducesResponseType(typeof(ApiResponse<BookingResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]

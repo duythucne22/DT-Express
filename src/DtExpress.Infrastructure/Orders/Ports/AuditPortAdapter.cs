@@ -1,3 +1,4 @@
+using DtExpress.Application.Auth.Services;
 using DtExpress.Application.Ports;
 using DtExpress.Domain.Audit.Interfaces;
 using DtExpress.Domain.Audit.Models;
@@ -20,6 +21,7 @@ public sealed class AuditPortAdapter : IAuditPort
     private readonly IIdGenerator _idGenerator;
     private readonly ICorrelationIdProvider _correlationIdProvider;
     private readonly IClock _clock;
+    private readonly ICurrentUserService _currentUser;
 
     /// <summary>Default actor when no authenticated user context is available.</summary>
     private const string SystemActor = "system";
@@ -28,12 +30,14 @@ public sealed class AuditPortAdapter : IAuditPort
         IAuditSink sink,
         IIdGenerator idGenerator,
         ICorrelationIdProvider correlationIdProvider,
-        IClock clock)
+        IClock clock,
+        ICurrentUserService currentUser)
     {
         _sink = sink ?? throw new ArgumentNullException(nameof(sink));
         _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
         _correlationIdProvider = correlationIdProvider ?? throw new ArgumentNullException(nameof(correlationIdProvider));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
     }
 
     /// <inheritdoc />
@@ -47,7 +51,7 @@ public sealed class AuditPortAdapter : IAuditPort
             EntityId: context.EntityId,
             Action: context.Action,
             Category: context.Category,
-            Actor: SystemActor,
+            Actor: _currentUser.DisplayName ?? _currentUser.UserName ?? SystemActor,
             CorrelationId: _correlationIdProvider.GetCorrelationId(),
             Timestamp: _clock.UtcNow,
             Description: context.Description,

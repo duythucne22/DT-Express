@@ -1,3 +1,4 @@
+using DtExpress.Application.Auth.Services;
 using DtExpress.Domain.Audit.Interfaces;
 using DtExpress.Domain.Audit.Models;
 using DtExpress.Domain.Common;
@@ -17,6 +18,7 @@ public sealed class DomainEventAuditInterceptor : IAuditInterceptor
     private readonly IIdGenerator _idGenerator;
     private readonly ICorrelationIdProvider _correlationIdProvider;
     private readonly IClock _clock;
+    private readonly ICurrentUserService _currentUser;
 
     /// <summary>Default actor when no authenticated user context is available.</summary>
     private const string SystemActor = "system";
@@ -24,11 +26,13 @@ public sealed class DomainEventAuditInterceptor : IAuditInterceptor
     public DomainEventAuditInterceptor(
         IIdGenerator idGenerator,
         ICorrelationIdProvider correlationIdProvider,
-        IClock clock)
+        IClock clock,
+        ICurrentUserService currentUser)
     {
         _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
         _correlationIdProvider = correlationIdProvider ?? throw new ArgumentNullException(nameof(correlationIdProvider));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
     }
 
     /// <inheritdoc />
@@ -42,7 +46,7 @@ public sealed class DomainEventAuditInterceptor : IAuditInterceptor
             EntityId: context.EntityId,
             Action: context.Action,
             Category: context.Category,
-            Actor: SystemActor,
+            Actor: _currentUser.DisplayName ?? _currentUser.UserName ?? SystemActor,
             CorrelationId: _correlationIdProvider.GetCorrelationId(),
             Timestamp: _clock.UtcNow,
             Description: context.Description,

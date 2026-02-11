@@ -5,6 +5,7 @@ using DtExpress.Domain.Common;
 using DtExpress.Domain.Routing.Enums;
 using DtExpress.Domain.Routing.Models;
 using DtExpress.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using DomainRoute = DtExpress.Domain.Routing.Models.Route;
@@ -19,6 +20,7 @@ namespace DtExpress.Api.Controllers;
 [Route("api/routing")]
 [Produces("application/json")]
 [Tags("Routing")]
+[Authorize]
 public sealed class RoutingController : ControllerBase
 {
     private readonly RouteCalculationService _calculationService;

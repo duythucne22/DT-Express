@@ -3,6 +3,7 @@ using DtExpress.Api.Models.Tracking;
 using DtExpress.Application.Tracking;
 using DtExpress.Domain.Common;
 using DtExpress.Domain.Tracking.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DtExpress.Api.Controllers;
@@ -15,6 +16,7 @@ namespace DtExpress.Api.Controllers;
 [Route("api/tracking")]
 [Produces("application/json")]
 [Tags("Tracking")]
+[Authorize]
 public sealed class TrackingController : ControllerBase
 {
     private readonly TrackingSubscriptionService _trackingService;

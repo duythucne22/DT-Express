@@ -8,13 +8,13 @@ namespace DtExpress.Api.Models.Routing;
 
 /// <summary>Latitude/Longitude coordinate pair.</summary>
 public sealed record GeoCoordinateDto(
-    [property: Required] decimal Latitude,
-    [property: Required] decimal Longitude);
+    [Required] decimal Latitude,
+    [Required] decimal Longitude);
 
 /// <summary>Package weight with unit.</summary>
 public sealed record WeightDto(
-    [property: Required, Range(0.01, double.MaxValue)] decimal Value,
-    [property: Required] string Unit);
+    [Required, Range(0.01, double.MaxValue)] decimal Value,
+    [Required] string Unit);
 
 /// <summary>Money amount with currency.</summary>
 public sealed record MoneyDto(decimal Amount, string Currency);

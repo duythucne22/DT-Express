@@ -26,8 +26,8 @@ public sealed record ContactInfoDto
 
 /// <summary>Package weight with unit.</summary>
 public sealed record CarrierWeightDto(
-    [property: Required, Range(0.01, double.MaxValue)] decimal Value,
-    [property: Required] string Unit);
+    [Required, Range(0.01, double.MaxValue)] decimal Value,
+    [Required] string Unit);
 
 /// <summary>Money amount with currency code.</summary>
 public sealed record CarrierMoneyDto(decimal Amount, string Currency);
