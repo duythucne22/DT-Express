@@ -65,7 +65,39 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "DT-Express TMS API",
         Version = "v1",
-        Description = "Transport Management System — Dynamic Routing, Multi-Carrier, Real-time Tracking, Order Processing, Audit Trail"
+        Description = """
+            Transport Management System — Dynamic Routing, Multi-Carrier, Real-time Tracking, Order Processing, Audit Trail.
+
+            ## Authentication
+            Use **POST /api/auth/login** to get a JWT token, then click the 🔒 **Authorize** button above and enter: `Bearer {token}`
+
+            ## Test Accounts (seeded)
+            | Username | Password | Role |
+            |---|---|---|
+            | admin | admin123 | Admin (full access) |
+            | dispatcher | passwd123 | Dispatcher (orders + carriers) |
+            | driver | passwd123 | Driver (deliver orders) |
+            | viewer | passwd123 | Viewer (read-only) |
+
+            ## Domains
+            - **Orders** — Full lifecycle: Created → Confirmed → Shipped → Delivered / Cancelled
+            - **Routing** — Strategy-based route calculation (Fastest / Cheapest / Balanced)
+            - **Carriers** — Multi-carrier quotes and booking (SF Express 顺丰, JD Logistics 京东)
+            - **Tracking** — Real-time shipment tracking with observer pattern
+            - **Audit** — Immutable audit trail with correlation ID tracing
+
+            ## Chinese Data Support
+            All text fields support Chinese characters (UTF-8). Use Chinese addresses (上海, 北京, 广州), names (张三, 李四), and weight units (Kg, G, Jin, Lb).
+            """,
+        Contact = new OpenApiContact
+        {
+            Name = "DT-Express Team",
+            Email = "dev@dtexpress.com"
+        },
+        License = new OpenApiLicense
+        {
+            Name = "MIT"
+        }
     });
 
     // JWT Bearer auth in Swagger UI
