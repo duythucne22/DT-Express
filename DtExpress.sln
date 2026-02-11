@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DtExpress.Infrastructure.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DtExpress.Api.Tests", "tests\DtExpress.Api.Tests\DtExpress.Api.Tests.csproj", "{181854AF-2B8C-4205-B465-7BCE1C459D81}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DtExpress.Infrastructure.Data", "src\DtExpress.Infrastructure.Data\DtExpress.Infrastructure.Data.csproj", "{FFD76C43-955F-4607-89B9-732CF343C6E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -64,6 +66,10 @@ Global
 		{181854AF-2B8C-4205-B465-7BCE1C459D81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{181854AF-2B8C-4205-B465-7BCE1C459D81}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{181854AF-2B8C-4205-B465-7BCE1C459D81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFD76C43-955F-4607-89B9-732CF343C6E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFD76C43-955F-4607-89B9-732CF343C6E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFD76C43-955F-4607-89B9-732CF343C6E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFD76C43-955F-4607-89B9-732CF343C6E8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3A0F2477-7257-4757-804F-145F27CAECE7} = {24A071B6-8EEC-480C-A4CA-B1BFDA5EDD92}
@@ -74,5 +80,6 @@ Global
 		{9B4A25B2-DA7B-412C-9E32-165D2B32FD0E} = {4C0DEB83-32A7-4239-A35B-62F783445C44}
 		{20875DB3-6A6E-4E9D-9CA1-5A43FA5E25C6} = {4C0DEB83-32A7-4239-A35B-62F783445C44}
 		{181854AF-2B8C-4205-B465-7BCE1C459D81} = {4C0DEB83-32A7-4239-A35B-62F783445C44}
+		{FFD76C43-955F-4607-89B9-732CF343C6E8} = {24A071B6-8EEC-480C-A4CA-B1BFDA5EDD92}
 	EndGlobalSection
 EndGlobal

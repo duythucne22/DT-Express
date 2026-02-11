@@ -1,0 +1,1077 @@
+{
+  "info": {
+    "name": "DT-Express TMS API",
+    "description": "Transport Management System — 30 endpoints + SignalR hub across 9 domains.\n\nDynamic Routing, Multi-Carrier (SF 顺丰, JD 京东), Real-time Tracking, Order Processing, Audit Trail, Dashboard, Reports, Webhooks.\n\n## Quick Start\n1. Run 'Login (Admin)' request\n2. Token is auto-saved to {{accessToken}} variable\n3. All authenticated requests use the token automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "dtexpress-tms"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5198", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "orderNumber", "value": "", "type": "string" },
+    { "key": "trackingNumber", "value": "", "type": "string" },
+    { "key": "correlationId", "value": "postman-test-001", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set correlation ID header on every request",
+          "pm.request.headers.upsert({",
+          "    key: 'X-Correlation-ID',",
+          "    value: pm.variables.get('correlationId') || 'postman-' + Date.now()",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "JWT authentication: login, register, refresh token.\nAll endpoints are anonymous (no token required).",
+      "item": [
+        {
+          "name": "1. Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Success is true', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});",
+                  "pm.test('Has access token', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "});",
+                  "pm.test('Role is Admin', () => {",
+                  "    pm.expect(pm.response.json().data.role).to.eql('Admin');",
+                  "});",
+                  "pm.test('Has correlation ID', () => {",
+                  "    pm.expect(pm.response.json().correlationId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "1b. Login (Dispatcher)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Role is Dispatcher', () => pm.expect(pm.response.json().data.role).to.eql('Dispatcher'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dispatcher\",\n  \"password\": \"passwd123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "1c. Login (Driver)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Role is Driver', () => pm.expect(pm.response.json().data.role).to.eql('Driver'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"driver\",\n  \"password\": \"passwd123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "1d. Login (Viewer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Role is Viewer', () => pm.expect(pm.response.json().data.role).to.eql('Viewer'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer\",\n  \"password\": \"passwd123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "1e. Login (Wrong Password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error code AUTH_FAILED', () => {",
+                  "    pm.expect(pm.response.json().error.code).to.eql('AUTH_FAILED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "2. Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Success with tokens', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.accessToken).to.be.a('string');",
+                  "    pm.expect(json.data.username).to.eql('testuser_' + pm.variables.get('$timestamp'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser_{{$timestamp}}\",\n  \"email\": \"test_{{$timestamp}}@dtexpress.com\",\n  \"password\": \"testpass123\",\n  \"displayName\": \"测试用户\",\n  \"role\": \"Viewer\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "3. Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('New tokens received', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Order lifecycle: Create → Confirm → Ship → Deliver / Cancel.\nRequires authentication. State transitions via PUT endpoints.",
+      "item": [
+        {
+          "name": "4. Create Order (Chinese data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Order created', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.status).to.eql('Created');",
+                  "    pm.collectionVariables.set('orderId', json.data.orderId);",
+                  "    pm.collectionVariables.set('orderNumber', json.data.orderNumber);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"张三\",\n  \"customerPhone\": \"13812345678\",\n  \"customerEmail\": \"zhangsan@example.com\",\n  \"origin\": {\n    \"street\": \"浦东新区陆家嘴环路1000号\",\n    \"city\": \"上海\",\n    \"province\": \"Shanghai\",\n    \"postalCode\": \"200120\",\n    \"country\": \"CN\"\n  },\n  \"destination\": {\n    \"street\": \"天河区珠江新城花城大道18号\",\n    \"city\": \"广州\",\n    \"province\": \"Guangdong\",\n    \"postalCode\": \"510623\",\n    \"country\": \"CN\"\n  },\n  \"serviceLevel\": \"Express\",\n  \"items\": [\n    {\n      \"description\": \"电子产品 - 笔记本电脑\",\n      \"quantity\": 1,\n      \"weight\": { \"value\": 2.5, \"unit\": \"Kg\" },\n      \"dimensions\": { \"lengthCm\": 35.0, \"widthCm\": 25.0, \"heightCm\": 3.0 }\n    },\n    {\n      \"description\": \"配件 - 充电器和鼠标\",\n      \"quantity\": 2,\n      \"weight\": { \"value\": 0.3, \"unit\": \"Kg\" },\n      \"dimensions\": null\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
+          }
+        },
+        {
+          "name": "5. List Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "    pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
+          }
+        },
+        {
+          "name": "5b. List Orders (filter by status)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?status=Created&serviceLevel=Express",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "status", "value": "Created" },
+                { "key": "serviceLevel", "value": "Express" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Get Order by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has order detail', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.id).to.eql(pm.collectionVariables.get('orderId'));",
+                  "    pm.expect(json.data.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}"] }
+          }
+        },
+        {
+          "name": "7. Confirm Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is Confirmed', () => {",
+                  "    pm.expect(pm.response.json().data.newStatus).to.eql('Confirmed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "confirm"] }
+          }
+        },
+        {
+          "name": "8. Ship Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is Shipped with tracking', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.newStatus).to.eql('Shipped');",
+                  "    pm.expect(json.data.trackingNumber).to.be.a('string');",
+                  "    pm.collectionVariables.set('trackingNumber', json.data.trackingNumber);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/ship", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "ship"] }
+          }
+        },
+        {
+          "name": "9. Deliver Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is Delivered', () => {",
+                  "    pm.expect(pm.response.json().data.newStatus).to.eql('Delivered');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/deliver", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "deliver"] }
+          }
+        },
+        {
+          "name": "10. Cancel Order (create new first)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// This test creates a new order first, then cancels it",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "const token = pm.collectionVariables.get('accessToken');",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: baseUrl + '/api/orders',",
+                  "    method: 'POST',",
+                  "    header: {",
+                  "        'Content-Type': 'application/json',",
+                  "        'Authorization': 'Bearer ' + token",
+                  "    },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({",
+                  "            customerName: '李四',",
+                  "            customerPhone: '13987654321',",
+                  "            origin: { street: '朝阳区建国门外大街1号', city: '北京', province: 'Beijing', postalCode: '100020', country: 'CN' },",
+                  "            destination: { street: '武侯区天府大道北段1700号', city: '成都', province: 'Sichuan', postalCode: '610041', country: 'CN' },",
+                  "            serviceLevel: 'Standard',",
+                  "            items: [{ description: '书籍 - 中文教材', quantity: 3, weight: { value: 1.5, unit: 'Kg' } }]",
+                  "        })",
+                  "    }",
+                  "}, (err, res) => {",
+                  "    const json = res.json();",
+                  "    pm.variables.set('cancelOrderId', json.data.orderId);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is Cancelled', () => {",
+                  "    pm.expect(pm.response.json().data.newStatus).to.eql('Cancelled');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"客户要求取消\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/orders/{{cancelOrderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{cancelOrderId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Routing",
+      "description": "Route calculation with strategy pattern.\nStrategies: Fastest, Cheapest, Balanced.",
+      "item": [
+        {
+          "name": "11. Calculate Route (Fastest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Strategy is Fastest', () => {",
+                  "    pm.expect(pm.response.json().data.strategyUsed).to.eql('Fastest');",
+                  "});",
+                  "pm.test('Has distance and cost', () => {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.distanceKm).to.be.a('number');",
+                  "    pm.expect(data.estimatedCost.amount).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": { \"latitude\": 31.2304, \"longitude\": 121.4737 },\n  \"destination\": { \"latitude\": 39.9042, \"longitude\": 116.4074 },\n  \"packageWeight\": { \"value\": 2.5, \"unit\": \"Kg\" },\n  \"serviceLevel\": \"Express\",\n  \"strategy\": \"Fastest\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/routing/calculate", "host": ["{{baseUrl}}"], "path": ["api", "routing", "calculate"] }
+          }
+        },
+        {
+          "name": "11b. Calculate Route (Jin weight unit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": { \"latitude\": 31.2304, \"longitude\": 121.4737 },\n  \"destination\": { \"latitude\": 23.1291, \"longitude\": 113.2644 },\n  \"packageWeight\": { \"value\": 5.0, \"unit\": \"Jin\" },\n  \"serviceLevel\": \"Standard\",\n  \"strategy\": \"Cheapest\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/routing/calculate", "host": ["{{baseUrl}}"], "path": ["api", "routing", "calculate"] }
+          }
+        },
+        {
+          "name": "12. Compare All Strategies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns 3 strategies', () => {",
+                  "    pm.expect(pm.response.json().data).to.have.length(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": { \"latitude\": 31.2304, \"longitude\": 121.4737 },\n  \"destination\": { \"latitude\": 23.1291, \"longitude\": 113.2644 },\n  \"packageWeight\": { \"value\": 5.0, \"unit\": \"Jin\" },\n  \"serviceLevel\": \"Standard\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/routing/compare", "host": ["{{baseUrl}}"], "path": ["api", "routing", "compare"] }
+          }
+        },
+        {
+          "name": "13. List Strategies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has Fastest, Cheapest, Balanced', () => {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data).to.include('Fastest');",
+                  "    pm.expect(data).to.include('Cheapest');",
+                  "    pm.expect(data).to.include('Balanced');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/routing/strategies", "host": ["{{baseUrl}}"], "path": ["api", "routing", "strategies"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Carriers",
+      "description": "Multi-carrier management: SF Express (顺丰) and JD Logistics (京东).\nQuotes, booking, and tracking.",
+      "item": [
+        {
+          "name": "14. List Carriers (Public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has SF and JD', () => {",
+                  "    const codes = pm.response.json().data.map(c => c.carrierCode);",
+                  "    pm.expect(codes).to.include('SF');",
+                  "    pm.expect(codes).to.include('JD');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/carriers", "host": ["{{baseUrl}}"], "path": ["api", "carriers"] }
+          }
+        },
+        {
+          "name": "15. Get Carrier Quotes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has quotes array', () => {",
+                  "    pm.expect(pm.response.json().data.quotes).to.be.an('array');",
+                  "});",
+                  "pm.test('Has recommendation', () => {",
+                  "    pm.expect(pm.response.json().data.recommended).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": {\n    \"street\": \"浦东新区陆家嘴环路1000号\",\n    \"city\": \"上海\",\n    \"province\": \"Shanghai\",\n    \"postalCode\": \"200120\",\n    \"country\": \"CN\"\n  },\n  \"destination\": {\n    \"street\": \"朝阳区建国门外大街1号\",\n    \"city\": \"北京\",\n    \"province\": \"Beijing\",\n    \"postalCode\": \"100020\",\n    \"country\": \"CN\"\n  },\n  \"weight\": { \"value\": 2.5, \"unit\": \"Kg\" },\n  \"serviceLevel\": \"Express\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/carriers/quotes", "host": ["{{baseUrl}}"], "path": ["api", "carriers", "quotes"] }
+          }
+        },
+        {
+          "name": "16. Book Shipment (SF Express)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has tracking number', () => {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.carrierCode).to.eql('SF');",
+                  "    pm.expect(data.trackingNumber).to.be.a('string');",
+                  "    pm.collectionVariables.set('trackingNumber', data.trackingNumber);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": {\n    \"street\": \"浦东新区陆家嘴环路1000号\",\n    \"city\": \"上海\",\n    \"province\": \"Shanghai\",\n    \"postalCode\": \"200120\",\n    \"country\": \"CN\"\n  },\n  \"destination\": {\n    \"street\": \"天河区珠江新城花城大道18号\",\n    \"city\": \"广州\",\n    \"province\": \"Guangdong\",\n    \"postalCode\": \"510623\",\n    \"country\": \"CN\"\n  },\n  \"weight\": { \"value\": 2.5, \"unit\": \"Kg\" },\n  \"sender\": {\n    \"name\": \"张三\",\n    \"phone\": \"13812345678\",\n    \"email\": \"zhangsan@example.com\"\n  },\n  \"recipient\": {\n    \"name\": \"李四\",\n    \"phone\": \"13987654321\",\n    \"email\": \"lisi@example.com\"\n  },\n  \"serviceLevel\": \"Express\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/carriers/SF/book", "host": ["{{baseUrl}}"], "path": ["api", "carriers", "SF", "book"] }
+          }
+        },
+        {
+          "name": "17. Track Shipment (SF)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has tracking info', () => {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.trackingNumber).to.be.a('string');",
+                  "    pm.expect(data.status).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/carriers/SF/track/{{trackingNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "carriers", "SF", "track", "{{trackingNumber}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tracking",
+      "description": "Real-time tracking with observer pattern.\nSnapshot retrieval and subscription.",
+      "item": [
+        {
+          "name": "18. Get Tracking Snapshot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// May be 200 or 404 depending on whether tracking data exists",
+                  "pm.test('Status 200 or 404', () => {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tracking/{{trackingNumber}}/snapshot", "host": ["{{baseUrl}}"], "path": ["api", "tracking", "{{trackingNumber}}", "snapshot"] }
+          }
+        },
+        {
+          "name": "19. Subscribe to Tracking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Subscribed successfully', () => {",
+                  "    pm.expect(pm.response.json().data.subscribed).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/tracking/{{trackingNumber}}/subscribe", "host": ["{{baseUrl}}"], "path": ["api", "tracking", "{{trackingNumber}}", "subscribe"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "description": "Immutable audit trail.\nQuery by entity or by correlation ID.\nRequires Admin or Dispatcher role.",
+      "item": [
+        {
+          "name": "20. Audit by Entity (Order)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns audit array', () => {",
+                  "    pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/audit/entity/Order/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api", "audit", "entity", "Order", "{{orderId}}"] }
+          }
+        },
+        {
+          "name": "21. Audit by Correlation ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns audit array', () => {",
+                  "    pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/audit/correlation/{{correlationId}}", "host": ["{{baseUrl}}"], "path": ["api", "audit", "correlation", "{{correlationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "System dashboard with stats, carrier performance, and top customers.\nRequires Admin role (carrier-performance also allows Dispatcher).",
+      "item": [
+        {
+          "name": "22. Dashboard Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has dashboard data', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.totalOrders).to.be.a('number');",
+                  "    pm.expect(d.statusBreakdown).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/dashboard/stats", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "stats"] }
+          }
+        },
+        {
+          "name": "23. Carrier Performance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns data', () => {",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/dashboard/carrier-performance", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "carrier-performance"] }
+          }
+        },
+        {
+          "name": "24. Top Customers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns data', () => {",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/dashboard/top-customers?limit=5", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "top-customers"], "query": [{ "key": "limit", "value": "5" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Advanced Orders",
+      "description": "Bulk create, update destination, split shipment.\nRequires Admin or Dispatcher role.",
+      "item": [
+        {
+          "name": "25. Bulk Create Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Bulk result has counts', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.successCount).to.be.a('number');",
+                  "    pm.expect(d.results).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/orders/bulk-create", "host": ["{{baseUrl}}"], "path": ["api", "orders", "bulk-create"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orders\": [\n    {\n      \"customerName\": \"Bulk A\",\n      \"customerPhone\": \"13900001001\",\n      \"customerEmail\": \"bulk-a@test.com\",\n      \"origin\": { \"street\": \"10 Warehouse Rd\", \"city\": \"Toronto\", \"province\": \"ON\", \"postalCode\": \"M5V 1A1\", \"country\": \"CA\" },\n      \"destination\": { \"street\": \"20 Delivery St\", \"city\": \"Ottawa\", \"province\": \"ON\", \"postalCode\": \"K1A 0B1\", \"country\": \"CA\" },\n      \"serviceLevel\": \"Express\",\n      \"items\": [{ \"description\": \"Widget X\", \"weight\": { \"value\": 1.0, \"unit\": \"kg\" }, \"quantity\": 5 }]\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "26. Update Destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Destination updated', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.orderId).to.be.a('string');",
+                  "    pm.expect(d.newDestination).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/update-destination", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "update-destination"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destination\": {\n    \"street\": \"999 New Delivery Blvd\",\n    \"city\": \"Edmonton\",\n    \"province\": \"AB\",\n    \"postalCode\": \"T5J 0N3\",\n    \"country\": \"CA\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "27. Split Shipment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Split result has new orders', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.originalOrderId).to.be.a('string');",
+                  "    pm.expect(d.newOrders).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/split-shipment", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}", "split-shipment"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groups\": [[0], [1, 2]]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "description": "Carrier webhook receiver with HMAC-SHA256 signature validation.\nAnonymous endpoint — carriers call this to push tracking updates.",
+      "item": [
+        {
+          "name": "28. Carrier Webhook (SF)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Compute HMAC-SHA256 signature for webhook",
+                  "const body = pm.request.body.raw;",
+                  "const secret = 'dt-express-webhook-secret-2026';",
+                  "const hash = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: 'sha256=' + hash });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Webhook accepted', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.accepted).to.be.true;",
+                  "    pm.expect(d.trackingNumber).to.eql('SF0000000001');",
+                  "    pm.expect(d.carrierCode).to.eql('SF');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/webhooks/carrier/SF", "host": ["{{baseUrl}}"], "path": ["api", "webhooks", "carrier", "SF"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackingNumber\": \"SF0000000001\",\n  \"status\": \"InTransit\",\n  \"description\": \"Package arrived at sorting center\",\n  \"latitude\": 31.2304,\n  \"longitude\": 121.4737,\n  \"occurredAt\": \"2026-01-15T10:30:00Z\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "description": "Reporting and data export.\nMonthly shipment reports (JSON/CSV) and revenue analytics.",
+      "item": [
+        {
+          "name": "29. Monthly Shipments (JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has report data', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.year).to.be.a('number');",
+                  "    pm.expect(d.month).to.be.a('number');",
+                  "    pm.expect(d.totalShipments).to.be.a('number');",
+                  "    pm.expect(d.shipments).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/reports/shipments/monthly?month=2026-01&format=json", "host": ["{{baseUrl}}"], "path": ["api", "reports", "shipments", "monthly"], "query": [{ "key": "month", "value": "2026-01" }, { "key": "format", "value": "json" }] }
+          }
+        },
+        {
+          "name": "29b. Monthly Shipments (CSV)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is CSV', () => {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv');",
+                  "});",
+                  "pm.test('Has CSV headers', () => {",
+                  "    pm.expect(pm.response.text()).to.include('OrderId');",
+                  "    pm.expect(pm.response.text()).to.include('OrderNumber');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/reports/shipments/monthly?month=2026-01&format=csv", "host": ["{{baseUrl}}"], "path": ["api", "reports", "shipments", "monthly"], "query": [{ "key": "month", "value": "2026-01" }, { "key": "format", "value": "csv" }] }
+          }
+        },
+        {
+          "name": "30. Revenue by Carrier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has revenue data', () => {",
+                  "    const d = pm.response.json().data;",
+                  "    pm.expect(d.grandTotal).to.be.a('number');",
+                  "    pm.expect(d.carriers).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/reports/revenue/by-carrier?from=2025-01-01&to=2027-12-31", "host": ["{{baseUrl}}"], "path": ["api", "reports", "revenue", "by-carrier"], "query": [{ "key": "from", "value": "2025-01-01" }, { "key": "to", "value": "2027-12-31" }] }
+          }
+        }
+      ]
+    }
+  ]
+}
