@@ -35,10 +35,15 @@ docs/
 │   ├── SERVICE-LEVEL-AGGREGATE.md   ← Products & SLA definitions
 │   └── VALUE-OBJECTS.md             ← Shared immutable concepts
 │
-└── architecture/                    ← System Architecture Docs
-    ├── CLEAN-ARCHITECTURE.md
-    ├── LAYER-RESPONSIBILITIES.md
-    └── INTEGRATION-MAP.md
+└── architecture/                    ← Unified Implementation Docs (NEW)
+    ├── 00-UNIFIED-SOLUTION-PLAN.md  ← Master architecture & constraints
+    ├── 01-PROJECT-STRUCTURE.md      ← Complete file tree with annotations
+    ├── 02-INTERFACE-CONTRACTS.md    ← All ISP-verified interfaces
+    ├── 03-DOMAIN-MODELS.md          ← Value objects, records, enums
+    ├── 04-DI-COMPOSITION.md         ← DI wiring & OCP proof
+    ├── 05-API-ENDPOINTS.md          ← Routes, Swagger, request/response
+    ├── 06-TESTING-STRATEGY.md       ← Test plan, mocking, conventions
+    └── 07-IMPLEMENTATION-TASKS.md   ← Ordered worker agent task list
 ```
 
 ---

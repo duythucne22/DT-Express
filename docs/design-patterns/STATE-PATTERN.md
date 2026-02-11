@@ -37,7 +37,6 @@
 │                         THE TRAFFIC LIGHT ANALOGY                           │
 │                         红绿灯的比喻                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
 │  A traffic light behaves differently based on its current state:            │
 │  红绿灯根据当前状态有不同的行为                                                │
 │                                                                             │
