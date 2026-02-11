@@ -1,0 +1,37 @@
+# =============================================================================
+# DT-Express TMS — Docker Compose (PostgreSQL only)
+# =============================================================================
+# Usage:
+#   docker-compose up -d          Start PostgreSQL
+#   docker-compose down           Stop (data persists in volume)
+#   docker-compose down -v        Stop + delete data volume
+#
+# Connect:
+#   psql -h localhost -p 5432 -U dtexpress -d dtexpress
+#   Password: dtexpress
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dt-express-db
+    environment:
+      POSTGRES_DB: dtexpress
+      POSTGRES_USER: dtexpress
+      POSTGRES_PASSWORD: dtexpress
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dtexpress -d dtexpress"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
