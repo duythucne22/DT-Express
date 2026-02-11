@@ -42,6 +42,9 @@ public sealed class GlobalExceptionFilter : IExceptionFilter
             StrategyNotFoundException ex =>
                 (StatusCodes.Status400BadRequest, ex.Code, ex.Message),
 
+            DomainException { Code: "NOT_FOUND" } ex =>
+                (StatusCodes.Status404NotFound, ex.Code, ex.Message),
+
             DomainException ex =>
                 (StatusCodes.Status400BadRequest, ex.Code, ex.Message),
 

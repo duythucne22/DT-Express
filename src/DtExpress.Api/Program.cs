@@ -1,9 +1,12 @@
 using System.Text;
 using DtExpress.Api.Auth;
 using DtExpress.Api.Filters;
+using DtExpress.Api.Hubs;
 using DtExpress.Api.Middleware;
+using DtExpress.Api.Tracking;
 using DtExpress.Application.Auth.Models;
 using DtExpress.Application.Auth.Services;
+using DtExpress.Domain.Tracking.Interfaces;
 using DtExpress.Infrastructure.Data;
 using DtExpress.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -44,12 +47,31 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
         ClockSkew = TimeSpan.FromSeconds(30), // Tight clock skew for 15min tokens
     };
+
+    // Allow JWT token via query string for SignalR WebSocket connections
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 builder.Services.AddAuthorization();
 
 // === Current User Context ===
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+// === SignalR (Real-time Tracking) ===
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<SignalRTrackingObserver>();
 
 // === API Setup ===
 builder.Services.AddControllers(options =>
@@ -136,6 +158,16 @@ var app = builder.Build();
 
 // === Middleware Pipeline ===
 
+// Enable request body buffering (needed for webhook HMAC signature validation)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/webhooks"))
+    {
+        context.Request.EnableBuffering();
+    }
+    await next();
+});
+
 // Correlation ID — reads/generates X-Correlation-ID header for request tracing
 app.UseMiddleware<CorrelationIdMiddleware>();
 
@@ -156,6 +188,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map SignalR hub for real-time tracking
+app.MapHub<TrackingHub>("/hubs/tracking");
+
+// Register SignalR observer for tracking events (subscribe to all events globally)
+var trackingSubject = app.Services.GetRequiredService<ITrackingSubject>();
+var signalRObserver = app.Services.GetRequiredService<SignalRTrackingObserver>();
+trackingSubject.Subscribe("*", signalRObserver); // Global subscription handled differently
 
 app.Run();
 

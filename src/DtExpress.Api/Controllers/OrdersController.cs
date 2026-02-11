@@ -252,6 +252,138 @@ public sealed class OrdersController : ControllerBase
             _correlationId.GetCorrelationId()));
     }
 
+    // ── Phase 9: Advanced Order Operations ───────────────────────
+
+    /// <summary>Bulk-create multiple orders in a single request.</summary>
+    /// <remarks>
+    /// Creates 1-50 orders atomically. All orders are validated before any are created.
+    /// If validation fails for any order, none are created — the response contains per-order errors.
+    ///
+    /// **Business rule**: Validate all → Process all → Return per-order results.
+    /// Dispatches BulkCreateOrdersCommand → BulkCreateOrdersHandler.
+    /// </remarks>
+    /// <response code="200">Bulk creation results (may contain mix of success/failure).</response>
+    /// <response code="400">Global validation error (e.g. more than 50 orders).</response>
+    [HttpPost("bulk-create")]
+    [Authorize(Roles = "Admin,Dispatcher")]
+    [ProducesResponseType(typeof(ApiResponse<BulkCreateOrdersResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> BulkCreate([FromBody] BulkCreateOrdersRequest request, CancellationToken ct)
+    {
+        var items = request.Orders.Select(o => new Application.Orders.Commands.BulkOrderItem(
+            o.CustomerName,
+            o.CustomerPhone,
+            o.CustomerEmail,
+            MapToAddress(o.Origin),
+            MapToAddress(o.Destination),
+            Enum.Parse<ServiceLevel>(o.ServiceLevel, ignoreCase: true),
+            o.Items.Select(MapToOrderItem).ToList()
+        )).ToList();
+
+        var command = new Application.Orders.Commands.BulkCreateOrdersCommand(items);
+        var result = await _commands.DispatchAsync<Application.Orders.Commands.BulkCreateResult>(command, ct);
+
+        var response = new BulkCreateOrdersResponse
+        {
+            SuccessCount = result.SuccessCount,
+            FailureCount = result.FailureCount,
+            Results = result.Results.Select(r =>
+                new BulkCreateItemResponse(r.Index, r.Success, r.OrderId, r.OrderNumber, r.Error)
+            ).ToList()
+        };
+
+        return Ok(ApiResponse<BulkCreateOrdersResponse>.Ok(response, _correlationId.GetCorrelationId()));
+    }
+
+    /// <summary>Update an order's destination address.</summary>
+    /// <remarks>
+    /// Changes the delivery destination for an existing order.
+    /// Only valid for orders in **Created** or **Confirmed** state.
+    /// Shipped/Delivered/Cancelled orders cannot change destination.
+    ///
+    /// Dispatches UpdateDestinationCommand → UpdateDestinationHandler.
+    /// </remarks>
+    /// <param name="id">Order ID (GUID).</param>
+    /// <param name="request">New destination address.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="200">Destination updated successfully.</response>
+    /// <response code="400">Invalid state or address.</response>
+    /// <response code="404">Order not found.</response>
+    [HttpPut("{id:guid}/update-destination")]
+    [Authorize(Roles = "Admin,Dispatcher")]
+    [ProducesResponseType(typeof(ApiResponse<UpdateDestinationResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateDestination(
+        [FromRoute] Guid id,
+        [FromBody] UpdateDestinationRequest request,
+        CancellationToken ct)
+    {
+        var newAddr = MapToAddress(request.Destination);
+        var command = new Application.Orders.Commands.UpdateDestinationCommand(id, newAddr);
+        await _commands.DispatchAsync<bool>(command, ct);
+
+        // Fetch updated order for response
+        var detail = await _queries.DispatchAsync<OrderDetail?>(new GetOrderByIdQuery(id), ct);
+
+        return Ok(ApiResponse<UpdateDestinationResponse>.Ok(
+            new UpdateDestinationResponse
+            {
+                OrderId = id,
+                NewDestination = detail?.Destination ?? newAddr.ToShortString(),
+                Status = detail?.Status.ToString() ?? "Unknown"
+            },
+            _correlationId.GetCorrelationId()));
+    }
+
+    /// <summary>Split an order into multiple shipments.</summary>
+    /// <remarks>
+    /// Splits an existing order based on item groupings. The original order is cancelled
+    /// and new orders are created for each group, preserving customer info, addresses,
+    /// and service level.
+    ///
+    /// **Rules**:
+    /// - Only Created or Confirmed orders can be split
+    /// - At least 2 groups required
+    /// - All items must be assigned to exactly one group
+    /// - Item indices are 0-based
+    ///
+    /// Dispatches SplitShipmentCommand → SplitShipmentHandler.
+    /// </remarks>
+    /// <param name="id">Order ID (GUID).</param>
+    /// <param name="request">Split configuration with item groups.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="200">Split completed with new order details.</response>
+    /// <response code="400">Invalid split configuration or order state.</response>
+    /// <response code="404">Order not found.</response>
+    [HttpPost("{id:guid}/split-shipment")]
+    [Authorize(Roles = "Admin,Dispatcher")]
+    [ProducesResponseType(typeof(ApiResponse<SplitShipmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SplitShipment(
+        [FromRoute] Guid id,
+        [FromBody] SplitShipmentRequest request,
+        CancellationToken ct)
+    {
+        var groups = request.Groups
+            .Select(g => (IReadOnlyList<int>)g.AsReadOnly())
+            .ToList();
+
+        var command = new Application.Orders.Commands.SplitShipmentCommand(id, groups);
+        var result = await _commands.DispatchAsync<Application.Orders.Commands.SplitShipmentResult>(command, ct);
+
+        var response = new SplitShipmentResponse
+        {
+            OriginalOrderId = result.OriginalOrderId,
+            NewOrders = result.NewOrders.Select(o =>
+                new SplitOrderResponse(o.OrderId, o.OrderNumber, o.ItemCount)
+            ).ToList()
+        };
+
+        return Ok(ApiResponse<SplitShipmentResponse>.Ok(response, _correlationId.GetCorrelationId()));
+    }
+
     // ── Mapping helpers ──────────────────────────────────────────
 
     private static Address MapToAddress(OrderAddressDto dto)

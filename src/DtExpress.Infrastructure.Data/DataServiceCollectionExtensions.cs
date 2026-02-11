@@ -1,5 +1,7 @@
 using DtExpress.Application.Auth.Models;
 using DtExpress.Application.Auth.Services;
+using DtExpress.Application.Dashboard;
+using DtExpress.Application.Reports;
 using DtExpress.Domain.Audit.Interfaces;
 using DtExpress.Domain.Orders.Enums;
 using DtExpress.Domain.Orders.Interfaces;
@@ -46,6 +48,12 @@ public static class DataServiceCollectionExtensions
         // === EF Repositories (scoped — matches DbContext lifetime) ===
         services.AddScoped<IOrderRepository, EfOrderRepository>();
         services.AddScoped<IOrderReadService, EfOrderReadService>();
+
+        // === Dashboard Read Service (Phase 9) ===
+        services.AddScoped<IDashboardReadService, EfDashboardReadService>();
+
+        // === Reports Read Service (Phase 9 — Batch 2) ===
+        services.AddScoped<IReportReadService, EfReportReadService>();
 
         // === EF Audit Store (with PII masking decorator) ===
         // Decorator Pattern: PiiMaskingAuditDecorator → EfAuditStore → PostgreSQL

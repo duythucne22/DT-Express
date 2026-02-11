@@ -1,3 +1,4 @@
+using DtExpress.Domain.Common;
 using DtExpress.Domain.Orders.Enums;
 using DtExpress.Domain.Orders.Interfaces;
 using DtExpress.Domain.Routing.Enums;
@@ -77,6 +78,20 @@ public sealed class Order
     {
         CarrierCode = carrierCode;
         TrackingNumber = trackingNumber;
+    }
+
+    /// <summary>
+    /// Update the destination address. Only valid for Created or Confirmed orders.
+    /// Shipped/Delivered/Cancelled orders cannot change destination.
+    /// </summary>
+    public void UpdateDestination(Address newDestination, DateTimeOffset timestamp)
+    {
+        if (Status is OrderStatus.Shipped or OrderStatus.Delivered or OrderStatus.Cancelled)
+            throw new DomainException("INVALID_OPERATION",
+                $"Cannot update destination in {Status} state.");
+
+        Destination = newDestination;
+        UpdatedAt = timestamp;
     }
 
     /// <summary>Clear collected domain events after publishing.</summary>

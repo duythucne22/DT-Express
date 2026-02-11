@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddTrackingServices();
         services.AddOrderServices();
         services.AddAuditServices();
+        services.AddDashboardServices();
         return services;
     }
 }

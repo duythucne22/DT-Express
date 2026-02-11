@@ -35,6 +35,11 @@ internal static class OrderRegistration
         services.AddScoped<ICommandHandler<DeliverOrderCommand, bool>, DeliverOrderHandler>();
         services.AddScoped<ICommandHandler<CancelOrderCommand, bool>, CancelOrderHandler>();
 
+        // Phase 9: Advanced order operations
+        services.AddScoped<ICommandHandler<BulkCreateOrdersCommand, BulkCreateResult>, BulkCreateOrdersHandler>();
+        services.AddScoped<ICommandHandler<UpdateDestinationCommand, bool>, UpdateDestinationHandler>();
+        services.AddScoped<ICommandHandler<SplitShipmentCommand, SplitShipmentResult>, SplitShipmentHandler>();
+
         // === CQRS Query Handlers ===
         services.AddScoped<IQueryHandler<GetOrderByIdQuery, OrderDetail?>, GetOrderByIdHandler>();
         services.AddScoped<IQueryHandler<ListOrdersQuery, IReadOnlyList<OrderSummary>>, ListOrdersHandler>();

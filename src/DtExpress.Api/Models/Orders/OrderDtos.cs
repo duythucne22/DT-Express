@@ -127,3 +127,82 @@ public sealed record CancelOrderRequest
 {
     public string? Reason { get; init; }
 }
+
+// ─────────────────────────────────────────────────────────────────
+//  POST /api/orders/bulk-create (Phase 9)
+// ─────────────────────────────────────────────────────────────────
+
+/// <summary>Request body for bulk order creation (1-50 orders).</summary>
+public sealed record BulkCreateOrdersRequest
+{
+    /// <summary>List of orders to create. Maximum 50.</summary>
+    [Required, MinLength(1)] public List<CreateOrderRequest> Orders { get; init; } = null!;
+}
+
+/// <summary>Response for bulk create operation.</summary>
+public sealed record BulkCreateOrdersResponse
+{
+    /// <summary>Number of successfully created orders.</summary>
+    public int SuccessCount { get; init; }
+
+    /// <summary>Number of failed orders.</summary>
+    public int FailureCount { get; init; }
+
+    /// <summary>Per-order results.</summary>
+    public IReadOnlyList<BulkCreateItemResponse> Results { get; init; } = [];
+}
+
+/// <summary>Result for a single order in the bulk batch.</summary>
+public sealed record BulkCreateItemResponse(
+    int Index,
+    bool Success,
+    Guid? OrderId,
+    string? OrderNumber,
+    string? Error);
+
+// ─────────────────────────────────────────────────────────────────
+//  PUT /api/orders/{id}/update-destination (Phase 9)
+// ─────────────────────────────────────────────────────────────────
+
+/// <summary>Request body for updating order destination.</summary>
+public sealed record UpdateDestinationRequest
+{
+    /// <summary>New delivery destination address.</summary>
+    [Required] public OrderAddressDto Destination { get; init; } = null!;
+}
+
+/// <summary>Response after destination update.</summary>
+public sealed record UpdateDestinationResponse
+{
+    public Guid OrderId { get; init; }
+    public string NewDestination { get; init; } = null!;
+    public string Status { get; init; } = null!;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  POST /api/orders/{id}/split-shipment (Phase 9)
+// ─────────────────────────────────────────────────────────────────
+
+/// <summary>Request body for splitting an order into multiple shipments.</summary>
+public sealed record SplitShipmentRequest
+{
+    /// <summary>
+    /// Groups of item indices. Each group becomes a new order.
+    /// All items must be assigned to exactly one group.
+    /// Example: [[0, 1], [2]] splits 3-item order into 2 shipments.
+    /// </summary>
+    [Required, MinLength(2)] public List<List<int>> Groups { get; init; } = null!;
+}
+
+/// <summary>Response after split shipment operation.</summary>
+public sealed record SplitShipmentResponse
+{
+    /// <summary>The original order ID (now cancelled).</summary>
+    public Guid OriginalOrderId { get; init; }
+
+    /// <summary>New orders created from the split.</summary>
+    public IReadOnlyList<SplitOrderResponse> NewOrders { get; init; } = [];
+}
+
+/// <summary>Info about one of the new orders from the split.</summary>
+public sealed record SplitOrderResponse(Guid OrderId, string OrderNumber, int ItemCount);
