@@ -461,3 +461,6 @@ C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\Mic
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
 C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.InMemory.dll
+C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\Microsoft.AspNetCore.Connections.Abstractions.dll
+C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\Microsoft.AspNetCore.SignalR.Common.dll
+C:\Users\duyth\Desktop\DT-Express\tests\DtExpress.Api.Tests\bin\Debug\net8.0\Microsoft.Extensions.Features.dll
